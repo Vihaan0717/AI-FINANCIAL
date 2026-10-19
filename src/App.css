@@ -32,3 +32,87 @@ body{background:radial-gradient(circle at 7% 6%,#b8d8ff 0,transparent 26rem),rad
 /* Keep lower dashboard cards self-contained at every breakpoint. */
 .bottom-grid>article{min-width:0}.commitments{min-width:0;padding:18px;overflow:hidden}.commitments .panel-heading{padding-bottom:5px}.commitments .text-button{flex:0 0 auto}.commitments .commit{min-width:0}.commitments .commit>p{min-width:0}.commitments .commit p b,.commitments .commit p span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:900px){.bottom-grid{grid-template-columns:1fr}.bottom-grid .commitments:last-child{grid-column:auto}.commitments{padding:17px}.bottom-grid .ai-card{min-height:190px}}
+
+/* Milestone 2: Transaction Engine enhancements */
+.mode-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid var(--line);background:var(--hover);color:var(--text2);cursor:pointer;transition:.2s}
+.mode-badge.real{border-color:rgba(71,217,178,.4);background:rgba(71,217,178,.12);color:var(--mint)}
+.mode-badge.demo{border-color:rgba(255,168,91,.4);background:rgba(255,168,91,.12);color:var(--orange)}
+.mode-badge:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.status-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.status-pill.completed{background:rgba(71,217,178,.15);color:var(--mint)}
+.status-pill.pending{background:rgba(246,185,77,.18);color:var(--orange)}
+.status-pill.failed{background:rgba(248,113,113,.18);color:#f87171}
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;margin-bottom:12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.filter-bar select{height:32px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--deep);color:var(--text2);font-size:10px;outline:0}
+.filter-tabs{display:flex;gap:4px;background:var(--deep);padding:3px;border-radius:9px;border:1px solid var(--line)}
+.filter-tab{border:0;background:transparent;color:var(--muted);padding:5px 9px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;transition:.2s}
+.filter-tab.active{background:var(--card);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.transaction-actions{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.action-btn{display:inline-grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;transition:.2s}
+.action-btn:hover{background:var(--hover);color:var(--text)}
+.action-btn.delete:hover{background:rgba(248,113,113,.15);color:#f87171}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-state>i{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;background:var(--hover);margin-bottom:16px;color:var(--bright)}
+.empty-state h3{margin:0 0 6px;color:var(--text);font-size:15px}
+.empty-state p{margin:0 0 18px;max-width:320px;font-size:11px;line-height:1.55}
+.chart-empty{display:flex;align-items:center;justify-content:center;height:140px;color:var(--muted);font-size:11px;border:1px dashed var(--line);border-radius:12px;margin-top:12px}
+
+/* Milestone 4: Personal Inventory & Smart Purchasing Styles */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px}
+.inv-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card);display:flex;flex-direction:column;justify-content:space-between;min-height:160px;transition:transform .2s ease,border-color .2s ease}
+.inv-card:hover{transform:translateY(-2px);border-color:var(--purple)}
+.inv-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.inv-card-title{font-size:13px;font-weight:700;color:var(--text);margin:0 0 4px}
+.inv-card-category{font-size:10px;color:var(--muted)}
+.inv-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.inv-pill.in_stock{background:rgba(52,211,153,.15);color:#34d399}
+.inv-pill.running_low{background:rgba(245,158,11,.15);color:#f59e0b}
+.inv-pill.out_of_stock{background:rgba(248,113,113,.18);color:#f87171}
+.inv-pill.expiring{background:rgba(236,72,153,.16);color:#f472b6}
+.inv-meta-row{display:flex;align-items:baseline;justify-content:space-between;margin:12px 0 8px}
+.inv-qty{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px}
+.inv-qty small{font-size:12px;color:var(--muted);margin-left:4px;font-weight:500}
+.inv-threshold{font-size:10px;color:var(--muted)}
+.inv-card-actions{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line);margin-top:8px}
+.budget-summary-box{padding:18px;border-radius:16px;border:1px solid var(--line);background:var(--deep);margin-bottom:16px}
+
+/* Milestone 5: Personal Planner, Recurring Bills & Forecast Styles */
+.planner-tabs{display:flex;gap:6px;padding:4px;background:var(--deep);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;width:fit-content}
+.planner-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:.2s}
+.planner-tab:hover{color:var(--text);background:var(--hover)}
+.planner-tab.active{color:var(--text);background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.planner-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px}
+.planner-stat-card{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;justify-content:space-between}
+.planner-stat-card span{font-size:10px;color:var(--muted);font-weight:700}
+.planner-stat-card strong{font-size:22px;letter-spacing:-.8px;margin:8px 0 2px;color:var(--text)}
+.planner-stat-card p{font-size:10px;color:var(--muted);margin:0}
+
+.bill-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;transition:border-color .15s}
+.bill-card:hover{border-color:var(--purple)}
+.bill-card.overdue{border-left:4px solid #f87171}
+.bill-card.due{border-left:4px solid #f6b94d}
+.bill-card.paid{opacity:.75}
+
+.bill-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.bill-pill.upcoming{background:rgba(96,165,250,.15);color:#60a5fa}
+.bill-pill.due{background:rgba(245,158,11,.15);color:#f59e0b}
+.bill-pill.overdue{background:rgba(239,68,68,.18);color:#ef4444}
+.bill-pill.paid{background:rgba(16,185,129,.15);color:#10b981}
+.bill-pill.skipped{background:rgba(148,163,184,.15);color:#94a3b8}
+
+.task-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;border:1px solid var(--soft);background:var(--deep);margin-bottom:8px;transition:all .15s}
+.task-item:hover{background:var(--hover)}
+.task-item.completed{opacity:.6;text-decoration:line-through}
+
+.priority-pill{padding:2px 6px;border-radius:4px;font-size:8px;font-weight:800;text-transform:uppercase}
+.priority-pill.highest{background:rgba(239,68,68,.2);color:#ef4444}
+.priority-pill.high{background:rgba(245,158,11,.2);color:#f59e0b}
+.priority-pill.medium{background:rgba(59,130,246,.2);color:#60a5fa}
+.priority-pill.low{background:rgba(148,163,184,.2);color:#94a3b8}
+
+.alert-banner{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:12px;margin-bottom:14px;border:1px solid var(--line)}
+.alert-banner.warning{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#fca5a5}
+.alert-banner.info{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#93c5fd}
+.alert-banner.mint{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#6ee7b7}
+
+

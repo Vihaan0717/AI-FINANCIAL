@@ -10,6 +10,7 @@ import type {
   AnomalyDetectionResult,
   MerchantAnalysisResult,
   GroundedInsightNarrative,
+  CategoryClassificationMap,
 } from '../types/insights'
 import {
   generateFinancialIntelligence,
@@ -25,6 +26,7 @@ export interface UseFinancialInsightsOptions {
   bills?: BillInstance[]
   isDemoMode: boolean
   userBudgetLimitPaise?: number
+  classificationMap?: CategoryClassificationMap
   initialYear?: number
   initialMonth?: number // 1-12
   loading?: boolean
@@ -81,6 +83,7 @@ export function useFinancialInsights({
   bills = [],
   isDemoMode,
   userBudgetLimitPaise,
+  classificationMap,
   initialYear,
   initialMonth,
   loading = false,
@@ -176,12 +179,19 @@ export function useFinancialInsights({
     return generateFinancialIntelligence(transactions, bills, {
       year: selectedYear,
       month: selectedMonth,
+      classificationMap,
     })
-  }, [transactions, bills, selectedYear, selectedMonth])
+  }, [transactions, bills, selectedYear, selectedMonth, classificationMap])
 
   const monthlyReport = useMemo(() => {
-    return generateMonthlyReport(transactions, bills, selectedYear, selectedMonth)
-  }, [transactions, bills, selectedYear, selectedMonth])
+    return generateMonthlyReport(
+      transactions,
+      bills,
+      selectedYear,
+      selectedMonth,
+      classificationMap
+    )
+  }, [transactions, bills, selectedYear, selectedMonth, classificationMap])
 
   // 4. Status flags
   const isEmpty = transactions.length === 0

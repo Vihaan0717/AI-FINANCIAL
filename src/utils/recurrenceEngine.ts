@@ -23,7 +23,15 @@ export function isLeapYear(year: number): boolean {
 /**
  * Parses YYYY-MM-DD into year, month (1-indexed), and day safely without UTC shifts.
  */
-export function parseLocalDateString(dateStr: string): { year: number; month: number; day: number } {
+export function parseLocalDateString(dateStr?: string | null): { year: number; month: number; day: number } {
+  if (!dateStr || typeof dateStr !== 'string') {
+    const fallback = new Date()
+    return {
+      year: fallback.getFullYear(),
+      month: fallback.getMonth() + 1,
+      day: fallback.getDate(),
+    }
+  }
   const parts = dateStr.slice(0, 10).split('-').map(Number)
   if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
     const fallback = new Date()

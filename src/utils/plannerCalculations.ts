@@ -44,7 +44,7 @@ export function forecastBudgetWithCommitments(
       continue
     }
 
-    if (b.status === 'overdue' || b.dueDate < todayStr) {
+    if (b.status === 'overdue' || (b.dueDate && b.dueDate < todayStr)) {
       overdueBillsCount++
     } else if (b.status === 'due' || b.dueDate === todayStr) {
       dueTodayBillsCount++
@@ -154,7 +154,7 @@ export function getActivePlannerNotifications(
 
   // 1. Process Bills
   for (const b of bills) {
-    if (b.status === 'paid' || b.status === 'skipped' || b.status === 'cancelled') {
+    if (b.status === 'paid' || b.status === 'skipped' || b.status === 'cancelled' || !b.dueDate) {
       continue
     }
 
@@ -200,7 +200,7 @@ export function getActivePlannerNotifications(
 
   // 2. Process Tasks
   for (const t of tasks) {
-    if (t.status === 'completed' || t.status === 'cancelled') {
+    if (t.status === 'completed' || t.status === 'cancelled' || !t.dueDate) {
       continue
     }
 
@@ -225,5 +225,5 @@ export function getActivePlannerNotifications(
     }
   }
 
-  return notifications.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  return notifications.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
 }

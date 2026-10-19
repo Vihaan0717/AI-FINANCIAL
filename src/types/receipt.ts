@@ -21,8 +21,11 @@ export interface ReceiptInventoryLink {
   id: string // Idempotency key, e.g. "receipt_<receiptId>_inventory"
   receiptId: string
   transactionId?: string
-  appliedItemIds: string[]
-  appliedAt: string // ISO 8601
+  appliedItemIds?: string[]
+  appliedAt?: string // ISO 8601
+  inventoryItemId?: string
+  quantityAdded?: number
+  dateAdded?: string
 }
 
 export type DocumentType = 'payment_screenshot' | 'itemized_receipt' | 'unknown'

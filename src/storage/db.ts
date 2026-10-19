@@ -1,5 +1,5 @@
 const DB_NAME = 'MoneyMateDB'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 const STORES = {
   TRANSACTIONS: 'transactions',
@@ -10,6 +10,7 @@ const STORES = {
   BILL_INSTANCES: 'bill_instances',
   PLANNER_TASKS: 'planner_tasks',
   DISMISSED_ALERTS: 'dismissed_alerts',
+  CATEGORIES: 'categories',
 } as const
 
 export const STORE_NAME = STORES.TRANSACTIONS
@@ -20,6 +21,7 @@ export const SCHEDULES_STORE_NAME = STORES.RECURRING_SCHEDULES
 export const BILLS_STORE_NAME = STORES.BILL_INSTANCES
 export const TASKS_STORE_NAME = STORES.PLANNER_TASKS
 export const DISMISSED_ALERTS_STORE_NAME = STORES.DISMISSED_ALERTS
+export const CATEGORIES_STORE_NAME = STORES.CATEGORIES
 
 /**
  * Opens or initializes the MoneyMateDB IndexedDB database.
@@ -100,6 +102,15 @@ export function openDatabase(): Promise<IDBDatabase> {
       // 8. Dismissed Alerts store (Version 3)
       if (!db.objectStoreNames.contains(STORES.DISMISSED_ALERTS)) {
         db.createObjectStore(STORES.DISMISSED_ALERTS, { keyPath: 'id' })
+      }
+
+      // 9. Categories store (Version 4)
+      if (!db.objectStoreNames.contains(STORES.CATEGORIES)) {
+        const catStore = db.createObjectStore(STORES.CATEGORIES, { keyPath: 'id' })
+        catStore.createIndex('type', 'type', { unique: false })
+        catStore.createIndex('name', 'name', { unique: false })
+        catStore.createIndex('isArchived', 'isArchived', { unique: false })
+        catStore.createIndex('isDemo', 'isDemo', { unique: false })
       }
     }
 

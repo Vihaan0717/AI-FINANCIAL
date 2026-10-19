@@ -1,17 +1,24 @@
 import type { InventoryUnit } from './inventory'
 
 export type ShoppingPriority = 'highest' | 'high' | 'medium' | 'low'
-export type ShoppingItemStatus = 'planned' | 'purchased' | 'skipped' | 'cancelled'
+export type ShoppingItemStatus =
+  | 'planned'
+  | 'purchased'
+  | 'skipped'
+  | 'cancelled'
+  | 'to_buy'
+  | 'bought'
 
 export interface ShoppingListItem {
   id: string
   productName: string
+  category?: string
   inventoryItemId?: string
   quantity: number
   unit: InventoryUnit
   estimatedPricePaise?: number
   priority: ShoppingPriority
-  reason: string
+  reason?: string
   status: ShoppingItemStatus
   createdAt: string // ISO 8601
   updatedAt?: string // ISO 8601
@@ -22,6 +29,9 @@ export interface ShoppingListItem {
   linkedReceiptId?: string
   linkedTransactionId?: string
 }
+
+// Backward-compatible alias
+export type ShoppingItem = ShoppingListItem
 
 export type PurchaseResolutionOption =
   | 'inventory_only'

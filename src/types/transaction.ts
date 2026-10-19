@@ -15,6 +15,7 @@ export interface Transaction {
   description: string
   merchant?: string
   category: string
+  categoryId?: string
   subcategory?: string
   paymentMethod: PaymentMethod
   accountId?: string
@@ -27,6 +28,7 @@ export interface Transaction {
   source?: TransactionSource
   linkedTransactionId?: string // e.g. for refund linking to an original expense
   externalRef?: string // Bank UTR or UPI reference ID
+  isDemo?: boolean
 }
 
 export type SortField = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'

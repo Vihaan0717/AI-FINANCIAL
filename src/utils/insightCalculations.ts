@@ -62,9 +62,10 @@ export function formatMonthLabel(year: number, month: number): string {
 }
 
 /**
- * Extracts the calendar date string (YYYY-MM-DD) from an ISO or date string.
+ * Extracts YYYY-MM-DD from an ISO string or date string safely.
  */
-export function extractLocalDate(dateStr: string): string {
+export function extractLocalDate(dateStr?: string | null): string {
+  if (!dateStr || typeof dateStr !== 'string') return ''
   return dateStr.slice(0, 10)
 }
 
@@ -710,7 +711,8 @@ export function generateMonthlyReport(
   transactions: Transaction[],
   bills: BillInstance[] = [],
   year: number,
-  month: number
+  month: number,
+  classificationMap?: CategoryClassificationMap
 ): MonthlyFinancialReport {
   const currentPrefix = `${year}-${String(month).padStart(2, '0')}`
   const monthTransactions = transactions.filter((t) =>
@@ -728,7 +730,7 @@ export function generateMonthlyReport(
   )
 
   const categoryShifts = calculateCategorySpendingShifts(monthTransactions, prevTransactions)
-  const needsWants = calculateNeedsVsWants(monthTransactions)
+  const needsWants = calculateNeedsVsWants(monthTransactions, classificationMap)
   const merchantAnalytics = analyzeMerchantSpending(monthTransactions)
   const anomaliesResult = detectSpendingAnomalies(monthTransactions)
 
@@ -928,7 +930,13 @@ export function generateFinancialIntelligence(
   const needsWants = calculateNeedsVsWants(currentMonthTx, options?.classificationMap)
   const anomaliesResult = detectSpendingAnomalies(currentMonthTx, options?.anomalyOptions)
   const merchantAnalytics = analyzeMerchantSpending(currentMonthTx)
-  const monthlyReport = generateMonthlyReport(transactions, bills, targetYear, targetMonth)
+  const monthlyReport = generateMonthlyReport(
+    transactions,
+    bills,
+    targetYear,
+    targetMonth,
+    options?.classificationMap
+  )
 
   const narrative = generateGroundedNarrative(
     monthOverMonth,

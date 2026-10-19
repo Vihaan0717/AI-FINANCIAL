@@ -39,6 +39,12 @@ export interface InventoryItem {
   archived?: boolean
   linkedTransactionId?: string // Optional link to purchase transaction
   isDemo?: boolean // Ensure demo data never leaks into live data
+
+  // Additional backwards-compatible alias fields
+  currentStock?: number
+  minimumStock?: number
+  costPerUnitPaise?: number
+  location?: string
 }
 
 export interface StockStatusResult {

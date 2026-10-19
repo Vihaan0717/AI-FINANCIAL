@@ -16,6 +16,7 @@ import {
   Clock,
   Coffee,
   CreditCard,
+  Database,
   Download,
   Edit2,
   Gift,
@@ -36,6 +37,7 @@ import {
   Sparkles,
   Square,
   Target,
+  Tag,
   Trash2,
   TrendingUp,
   Tv,
@@ -86,6 +88,12 @@ import { SettleBillModal } from './components/SettleBillModal'
 import { CalendarMonthView } from './components/CalendarMonthView'
 import { useFinancialInsights } from './hooks/useFinancialInsights'
 import { FinancialInsightsView } from './components/FinancialInsightsView'
+import { BackupModal } from './components/BackupModal'
+import { CategoryManagementModal } from './components/CategoryManagementModal'
+import { useCategories } from './hooks/useCategories'
+import { getLucideCategoryIcon } from './utils/categoryIcons'
+import type { Category } from './types/category'
+import type { RestoreResult } from './types/backup'
 
 type Section =
   | 'Dashboard'
@@ -109,7 +117,14 @@ const nav: { label: Exclude<Section, 'Settings'>; icon: LucideIcon }[] = [
   { label: 'AI Assistant', icon: Bot },
 ]
 
-function getCategoryIcon(category: string, type: string): LucideIcon {
+function getCategoryIcon(category: string, type: string, categoryMap?: Map<string, Category>): LucideIcon {
+  if (categoryMap && category) {
+    const match = categoryMap.get(category.toLowerCase())
+    if (match) {
+      return getLucideCategoryIcon(match.icon)
+    }
+  }
+
   if (type === 'transfer') return ArrowLeftRight
   if (type === 'refund') return RotateCcw
   if (type === 'income') return CreditCard
@@ -168,12 +183,16 @@ function TransactionRow({
   item,
   onEdit,
   onDelete,
+  categoryMap,
 }: {
   item: Transaction
   onEdit: (t: Transaction) => void
   onDelete: (t: Transaction) => void
+  categoryMap?: Map<string, Category>
 }) {
-  const Icon = getCategoryIcon(item.category || 'Other', item.type)
+  const Icon = getCategoryIcon(item.category || 'Other', item.type, categoryMap)
+  const matchedCategory = categoryMap?.get((item.category || '').toLowerCase())
+  const categoryColor = matchedCategory?.color
   const isIncome = item.type === 'income'
   const isTransfer = item.type === 'transfer'
   const isRefund = item.type === 'refund'
@@ -183,7 +202,10 @@ function TransactionRow({
 
   return (
     <div className="transaction-row">
-      <div className={`transaction-icon ${(item.category || 'other').toLowerCase().slice(0, 4)}`}>
+      <div
+        className={`transaction-icon ${(item.category || 'other').toLowerCase().slice(0, 4)}`}
+        style={categoryColor ? { backgroundColor: `${categoryColor}20`, color: categoryColor } : undefined}
+      >
         <Icon size={16} />
       </div>
 
@@ -269,6 +291,7 @@ function App() {
     toggleDemoMode,
     loadDemoDataIntoWorkspace,
     clearAllRealTransactions,
+    refresh: refreshTransactions,
   } = useTransactions()
 
   // Personal Inventory Hook (Milestone 4)
@@ -320,12 +343,24 @@ function App() {
     toggleTaskComplete,
     deleteTask,
     dismissNotification,
+    refreshData: refreshPlannerData,
   } = usePlanner({
     isDemoMode,
     transactions,
     userBudgetLimitPaise: userBudgetPaise,
     onRecordTransaction: addTransaction,
   })
+
+  // Category Engine Hook (Milestone 7.2)
+  const categoryHook = useCategories(isDemoMode)
+  const categoryMap = categoryHook.categoryMap
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+
+  const isCategoryInUse = async (categoryId: string, categoryName: string): Promise<boolean> => {
+    return transactions.some(
+      (t) => t.categoryId === categoryId || t.category?.toLowerCase() === categoryName.toLowerCase()
+    )
+  }
 
   // Financial Insights Engine Hook
   const insightsHook = useFinancialInsights({
@@ -334,6 +369,7 @@ function App() {
     isDemoMode,
     userBudgetLimitPaise: userBudgetPaise,
     loading,
+    classificationMap: categoryHook.classificationMap,
   })
 
   // Planner UI states
@@ -348,6 +384,18 @@ function App() {
   const [editingTask, setEditingTask] = useState<PlannerTask | null>(null)
 
   const [settlingBill, setSettlingBill] = useState<BillInstance | null>(null)
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
+
+  const handleRestoreComplete = async (result: RestoreResult) => {
+    await refreshTransactions()
+    await inventoryHook.reload()
+    await shoppingHook.reload()
+    await refreshPlannerData()
+    await categoryHook.reload()
+    notify(
+      `Database ${result.mode === 'replace' ? 'replaced' : 'merged'} successfully (${result.recordsProcessed} records processed)`
+    )
+  }
 
   const handleRequestNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -896,6 +944,7 @@ function App() {
                     item={item}
                     onEdit={handleOpenEditModal}
                     onDelete={handleOpenDeleteModal}
+                    categoryMap={categoryMap}
                   />
                 ))}
               </div>
@@ -1018,6 +1067,14 @@ function App() {
           text={`Authoritative ledger stored in IndexedDB. (${filteredTransactions.length} of ${transactions.length} records shown)`}
           action={
             <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                id="tx-manage-categories-btn"
+                className="outline-button"
+                onClick={() => setIsCategoryModalOpen(true)}
+              >
+                <Tag size={15} />
+                Categories
+              </button>
               <button className="outline-button" onClick={() => setIsReceiptModalOpen(true)}>
                 <Upload size={15} />
                 Scan receipt
@@ -1083,16 +1140,11 @@ function App() {
             onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
           >
             <option value="all">All categories</option>
-            <option value="Food & dining">Food & dining</option>
-            <option value="Groceries">Groceries</option>
-            <option value="Home">Home</option>
-            <option value="Transport">Transport</option>
-            <option value="Shopping">Shopping</option>
-            <option value="Utilities">Utilities</option>
-            <option value="Health">Health</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="Income">Income</option>
-            <option value="Transfer">Transfer</option>
+            {categoryHook.categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name} {c.isArchived ? '(Archived)' : ''}
+              </option>
+            ))}
           </select>
 
           {/* Payment Method Filter */}
@@ -1157,6 +1209,7 @@ function App() {
                   item={item}
                   onEdit={handleOpenEditModal}
                   onDelete={handleOpenDeleteModal}
+                  categoryMap={categoryMap}
                 />
               ))}
             </div>
@@ -2515,6 +2568,42 @@ function App() {
 
         <div>
           <p>
+            <b>Financial Categories</b>
+            <span>
+              Customize income and expense categories, icons, colors, and 50/30/20 needs vs. wants classifications.
+            </span>
+          </p>
+          <button
+            id="open-categories-modal-btn"
+            className="primary-button"
+            style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => setIsCategoryModalOpen(true)}
+          >
+            <Tag size={13} />
+            Manage Categories
+          </button>
+        </div>
+
+        <div>
+          <p>
+            <b>Data Backup & Recovery</b>
+            <span>
+              Export an integrity-verified JSON backup of all 9 database stores (including categories), or restore/merge an existing backup.
+            </span>
+          </p>
+          <button
+            id="open-backup-modal-btn"
+            className="primary-button"
+            style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => setIsBackupModalOpen(true)}
+          >
+            <Database size={13} />
+            Backup & Recovery
+          </button>
+        </div>
+
+        <div>
+          <p>
             <b>AI Vision & OCR Engine</b>
             <span>
               {geminiKey
@@ -2720,6 +2809,7 @@ function App() {
         onSave={handleSaveTransaction}
         onUpdate={handleUpdateTransaction}
         checkDuplicate={checkDuplicate}
+        availableCategories={categoryHook.categories}
       />
 
       {/* AI Receipt & Payment Capture Modal */}
@@ -2861,6 +2951,31 @@ function App() {
         onClose={() => setDeletingTransaction(null)}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
+      />
+
+      {/* Milestone 7.6: Data Backup & Recovery Modal */}
+      <BackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        currentScope={isDemoMode ? 'demo' : 'live'}
+        onRestoreComplete={handleRestoreComplete}
+        notify={notify}
+      />
+
+      {/* Milestone 7.2: Category Management Modal */}
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={categoryHook.categories}
+        onCreateCategory={categoryHook.createCategory}
+        onUpdateCategory={categoryHook.updateCategory}
+        onRenameCategory={categoryHook.renameCategory}
+        onArchiveCategory={categoryHook.archiveCategory}
+        onRestoreCategory={categoryHook.restoreCategory}
+        onDeleteCategory={categoryHook.deleteCategory}
+        isCategoryInUse={isCategoryInUse}
+        notify={notify}
+        currentScope={isDemoMode ? 'demo' : 'live'}
       />
 
       {/* Toast Notification */}

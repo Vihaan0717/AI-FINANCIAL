@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import {
   X,
   ArrowUpRight,
@@ -16,6 +16,7 @@ import type {
   PaymentMethod,
   DuplicateCheckResult,
 } from '../types/transaction'
+import type { Category } from '../types/category'
 import { validateAmount, paiseToRupees } from '../utils/money'
 
 interface TransactionModalProps {
@@ -23,6 +24,7 @@ interface TransactionModalProps {
   onClose: () => void
   initialData?: Transaction | null
   existingExpenses?: Transaction[]
+  availableCategories?: Category[]
   onSave: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   onUpdate?: (transaction: Transaction) => Promise<void>
   checkDuplicate: (candidate: {
@@ -36,7 +38,7 @@ interface TransactionModalProps {
   }) => DuplicateCheckResult
 }
 
-const EXPENSE_CATEGORIES = [
+const DEFAULT_EXPENSE_CATEGORIES = [
   'Food & dining',
   'Groceries',
   'Home',
@@ -48,7 +50,7 @@ const EXPENSE_CATEGORIES = [
   'Other',
 ]
 
-const INCOME_CATEGORIES = [
+const DEFAULT_INCOME_CATEGORIES = [
   'Income',
   'Salary',
   'Freelance',
@@ -62,6 +64,7 @@ export function TransactionModal({
   onClose,
   initialData,
   existingExpenses = [],
+  availableCategories,
   onSave,
   onUpdate,
   checkDuplicate,
@@ -137,6 +140,40 @@ export function TransactionModal({
     }
   }
 
+  // Determine available options for current type
+  const categoryOptions = useMemo(() => {
+    if (type === 'transfer') {
+      return [{ id: 'transfer', name: 'Transfer', isArchived: false }]
+    }
+
+    if (availableCategories && availableCategories.length > 0) {
+      const targetType = type === 'income' ? 'income' : 'expense'
+      const activeCats: { id: string; name: string; rawName?: string; isArchived: boolean }[] = availableCategories
+        .filter((c) => c.type === targetType && !c.isArchived)
+        .map((c) => ({ id: c.id, name: c.name, isArchived: false }))
+
+      // If editing existing transaction, preserve its category even if archived or legacy
+      if (initialData?.category) {
+        const found = activeCats.find((c) => c.name.toLowerCase() === initialData.category.toLowerCase())
+        if (!found) {
+          const archivedCat = availableCategories.find(
+            (c) => c.name.toLowerCase() === initialData.category.toLowerCase()
+          )
+          activeCats.unshift({
+            id: archivedCat?.id || 'legacy',
+            name: `${initialData.category} (${archivedCat?.isArchived ? 'Archived' : 'Legacy'})`,
+            rawName: initialData.category,
+            isArchived: true,
+          })
+        }
+      }
+      return activeCats
+    }
+
+    const defaultNames = type === 'income' ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES
+    return defaultNames.map((name) => ({ id: name, name, isArchived: false }))
+  }, [type, availableCategories, initialData])
+
   if (!isOpen) return null
 
   const handleSubmit = async (e: FormEvent, bypassDuplicateCheck = false) => {
@@ -176,6 +213,12 @@ export function TransactionModal({
 
     setIsSubmitting(true)
     try {
+      const matchedCat = availableCategories?.find(
+        (c) =>
+          c.name.toLowerCase() === category.toLowerCase() &&
+          (c.type === type || (type === 'refund' && c.type === 'expense'))
+      )
+
       const payload: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'> = {
         type,
         amount: valResult.paise,
@@ -184,6 +227,7 @@ export function TransactionModal({
         description: description.trim(),
         merchant: merchant.trim() || undefined,
         category,
+        categoryId: matchedCat?.id || initialData?.categoryId,
         paymentMethod,
         status,
         notes: notes.trim() || undefined,
@@ -381,16 +425,15 @@ export function TransactionModal({
             Category
             <select
               name="category"
+              id="transaction-category-select"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              {type === 'income' ? (
-                INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)
-              ) : type === 'transfer' ? (
-                <option value="Transfer">Transfer</option>
-              ) : (
-                EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)
-              )}
+              {categoryOptions.map((opt: { id: string; name: string; rawName?: string; isArchived: boolean }) => (
+                <option key={opt.id} value={opt.rawName || opt.name}>
+                  {opt.name}
+                </option>
+              ))}
             </select>
           </label>
 

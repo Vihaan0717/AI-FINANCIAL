@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useMemo, useEffect, type FormEvent } from 'react'
 import {
   AlertCircle,
   ArrowDownLeft,
   ArrowUpRight,
   ArrowLeftRight,
+  ArrowLeft,
   RotateCcw,
   Bell,
   Bot,
@@ -64,6 +65,7 @@ import {
   YAxis,
 } from 'recharts'
 import './App.css'
+import './liquid-glass.css'
 import type { Transaction, PaymentMethod, TransactionStatus, SortField } from './types/transaction'
 import type { InventoryItem, InventoryCategory, StockStatus, StockAdjustmentInput } from './types/inventory'
 import type { ShoppingListItem, PurchaseResolutionOption } from './types/shopping'
@@ -181,16 +183,30 @@ function formatDisplayDate(dateStr: string): string {
   }
 }
 
+function splitDisplayDate(dateStr: string): { date: string; time: string } {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return { date: dateStr, time: '' }
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    return { date, time }
+  } catch {
+    return { date: dateStr, time: '' }
+  }
+}
+
 function TransactionRow({
   item,
   onEdit,
   onDelete,
   categoryMap,
+  isTableView = false,
 }: {
   item: Transaction
   onEdit: (t: Transaction) => void
   onDelete: (t: Transaction) => void
   categoryMap?: Map<string, Category>
+  isTableView?: boolean
 }) {
   const Icon = getCategoryIcon(item.category || 'Other', item.type, categoryMap)
   const matchedCategory = categoryMap?.get((item.category || '').toLowerCase())
@@ -199,8 +215,77 @@ function TransactionRow({
   const isTransfer = item.type === 'transfer'
   const isRefund = item.type === 'refund'
 
-  const sign = isIncome ? '+' : isTransfer ? '⇄' : isRefund ? '↺' : '−'
+  // Refined spaced sign so symbols never collide with ₹
+  const sign = isIncome ? '+ ' : isTransfer ? '⇄ ' : isRefund ? '+ ' : '− '
   const amountClass = isIncome ? 'income' : isTransfer ? 'transfer' : isRefund ? 'refund' : 'expense'
+  const { date: displayDate, time: displayTime } = splitDisplayDate(item.date)
+
+  if (isTableView) {
+    return (
+      <div className="transaction-row liquid-tx-grid liquid-tx-row">
+        {/* Col 1: Transaction Main (Icon + Description + Category/Payment) */}
+        <div className="liquid-tx-col-main">
+          <div
+            className={`transaction-icon ${(item.category || 'other').toLowerCase().slice(0, 4)}`}
+            style={categoryColor ? { backgroundColor: `${categoryColor}20`, color: categoryColor } : undefined}
+          >
+            <Icon size={16} />
+          </div>
+          <div className="transaction-name" style={{ minWidth: 0 }}>
+            <strong className="transaction-title">{item.description}</strong>
+            <div className="transaction-meta">
+              <span>{item.category || 'General'}</span>
+              <span className="dot-sep">·</span>
+              <span>{item.paymentMethod || 'UPI'}</span>
+              {isRefund && (
+                <span className="status-pill completed" style={{ marginLeft: '4px' }}>
+                  Refund
+                </span>
+              )}
+              {item.status && item.status !== 'completed' && (
+                <span className={`status-pill ${item.status}`} style={{ marginLeft: '4px' }}>
+                  {item.status}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Col 2: Date slot - Dedicated Column */}
+        <div className="liquid-tx-col-date">
+          <span>{displayDate}</span>
+          {displayTime && <small>{displayTime}</small>}
+        </div>
+
+        {/* Col 3: Amount slot - Dedicated Column */}
+        <div className="liquid-tx-col-amount">
+          <strong className={`transaction-amount ${amountClass}`}>
+            {sign}{formatPaise(item.amount)}
+          </strong>
+        </div>
+
+        {/* Col 4: Actions slot - Dedicated Column */}
+        <div className="liquid-tx-col-actions">
+          <button
+            className="action-btn"
+            onClick={() => onEdit(item)}
+            aria-label={`Edit ${item.description}`}
+            title="Edit transaction"
+          >
+            <Edit2 size={13} />
+          </button>
+          <button
+            className="action-btn delete"
+            onClick={() => onDelete(item)}
+            aria-label={`Delete ${item.description}`}
+            title="Delete transaction"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="transaction-row">
@@ -212,42 +297,49 @@ function TransactionRow({
       </div>
 
       <div className="transaction-name">
-        <strong title={item.description}>{item.description}</strong>
-        <span>
-          {item.category || 'General'} · {item.paymentMethod || 'UPI'}
-          {item.merchant ? ` · ${item.merchant}` : ''}
-          {item.status !== 'completed' && (
-            <span className={`status-pill ${item.status}`} style={{ marginLeft: '6px' }}>
+        <strong className="transaction-title">{item.description}</strong>
+        <div className="transaction-meta">
+          <span>{item.category || 'General'}</span>
+          <span className="dot-sep">·</span>
+          <span>{item.paymentMethod || 'UPI'}</span>
+          <span className="dot-sep">·</span>
+          <span className="transaction-date-text">{formatDisplayDate(item.date)}</span>
+          {isRefund && (
+            <span className="status-pill completed" style={{ marginLeft: '4px' }}>
+              Refund
+            </span>
+          )}
+          {item.status && item.status !== 'completed' && (
+            <span className={`status-pill ${item.status}`} style={{ marginLeft: '4px' }}>
               {item.status}
             </span>
           )}
-        </span>
+        </div>
       </div>
 
-      <span className="transaction-date">{formatDisplayDate(item.date)}</span>
+      <div className="transaction-right">
+        <strong className={`transaction-amount ${amountClass}`}>
+          {sign}{formatPaise(item.amount)}
+        </strong>
 
-      <strong className={amountClass}>
-        {sign}
-        {formatPaise(item.amount)}
-      </strong>
-
-      <div className="transaction-actions">
-        <button
-          className="action-btn"
-          onClick={() => onEdit(item)}
-          aria-label={`Edit ${item.description}`}
-          title="Edit transaction"
-        >
-          <Edit2 size={14} />
-        </button>
-        <button
-          className="action-btn delete"
-          onClick={() => onDelete(item)}
-          aria-label={`Delete ${item.description}`}
-          title="Delete transaction"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="transaction-actions">
+          <button
+            className="action-btn"
+            onClick={() => onEdit(item)}
+            aria-label={`Edit ${item.description}`}
+            title="Edit transaction"
+          >
+            <Edit2 size={13} />
+          </button>
+          <button
+            className="action-btn delete"
+            onClick={() => onDelete(item)}
+            aria-label={`Delete ${item.description}`}
+            title="Delete transaction"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -268,6 +360,7 @@ function App() {
   const [geminiKey, setGeminiKey] = useState<string>(() =>
     typeof window !== 'undefined' ? localStorage.getItem('moneymate_gemini_api_key') || '' : ''
   )
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState([
@@ -291,7 +384,8 @@ function App() {
     deleteTransaction,
     checkDuplicate,
     toggleDemoMode,
-    loadDemoDataIntoWorkspace,
+    purgeMockDataFromRealDB,
+    reclassifyTransfers,
     clearAllRealTransactions,
     refresh: refreshTransactions,
   } = useTransactions()
@@ -309,6 +403,31 @@ function App() {
     }
     return ''
   })
+
+  // Configurable Emergency Fund savings target
+  const [emergencyGoalRupees, setEmergencyGoalRupees] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('moneymate_emergency_goal_rupees')
+      if (saved && !isNaN(parseInt(saved, 10))) return parseInt(saved, 10)
+    }
+    return 60000
+  })
+
+  // Category specific budget targets
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('moneymate_category_budgets')
+        if (saved) return JSON.parse(saved)
+      } catch {
+        // ignore
+      }
+    }
+    return {}
+  })
+
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false)
+  const [editingBudgetCategory, setEditingBudgetCategory] = useState<string | null>(null)
 
   // Inventory modal states
   const [isInvModalOpen, setIsInvModalOpen] = useState(false)
@@ -680,383 +799,665 @@ function App() {
 
   /* ------------------- Dashboard Section ------------------- */
   const Dashboard = () => {
+    const [analyticsTab, setAnalyticsTab] = useState<'cashflow' | 'categories'>('cashflow')
+    const [waveHoverIndex, setWaveHoverIndex] = useState<number | null>(null)
+
+    // Authentic last 7 days spending wave data
+    const last7DaysWaveData = useMemo(() => {
+      let refDate = new Date()
+      const expenseDates = transactions
+        .filter((t) => t.type === 'expense')
+        .map((t) => new Date(t.date).getTime())
+        .filter((t) => !isNaN(t))
+      if (expenseDates.length > 0) {
+        refDate = new Date(Math.max(...expenseDates))
+      }
+
+      const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+      const expenseMap = new Map<string, number>()
+      transactions.forEach((t) => {
+        if (t.type === 'expense') {
+          const key = t.date.includes('T') ? t.date.split('T')[0] : t.date.slice(0, 10)
+          expenseMap.set(key, (expenseMap.get(key) || 0) + t.amount)
+        }
+      })
+
+      const days: {
+        dateStr: string
+        dayLabel: string
+        fullDay: string
+        dateFormatted: string
+        amountPaise: number
+        rupees: number
+      }[] = []
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(refDate)
+        d.setDate(d.getDate() - i)
+        const dateStr = d.toISOString().slice(0, 10)
+        const dayOfWeek = d.getDay()
+        const amountPaise = expenseMap.get(dateStr) || 0
+        days.push({
+          dateStr,
+          dayLabel: dayLetters[dayOfWeek],
+          fullDay: dayNames[dayOfWeek],
+          dateFormatted: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          amountPaise,
+          rupees: Math.round(amountPaise / 100),
+        })
+      }
+
+      return days
+    }, [transactions])
+
+    const wavePoints = useMemo(() => {
+      const maxVal = Math.max(...last7DaysWaveData.map((d) => d.amountPaise), 1)
+      const width = 320
+      const padX = 14
+      const usableW = width - padX * 2
+      const stepX = usableW / 6
+
+      return last7DaysWaveData.map((d, i) => {
+        const x = padX + i * stepX
+        const ratio = d.amountPaise / maxVal
+        const y = 85 - ratio * 55
+        return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, ...d }
+      })
+    }, [last7DaysWaveData])
+
+    const { waveAreaPath, waveLinePath } = useMemo(() => {
+      if (wavePoints.length === 0) return { waveAreaPath: '', waveLinePath: '' }
+      let linePath = `M ${wavePoints[0].x} ${wavePoints[0].y}`
+      for (let i = 0; i < wavePoints.length - 1; i++) {
+        const p0 = wavePoints[i]
+        const p1 = wavePoints[i + 1]
+        const cpx1 = ((p0.x + p1.x) / 2).toFixed(1)
+        const cpx2 = ((p0.x + p1.x) / 2).toFixed(1)
+        linePath += ` C ${cpx1} ${p0.y}, ${cpx2} ${p1.y}, ${p1.x} ${p1.y}`
+      }
+      const areaPath = `${linePath} L ${wavePoints[wavePoints.length - 1].x} 110 L ${wavePoints[0].x} 110 Z`
+      return { waveAreaPath: areaPath, waveLinePath: linePath }
+    }, [wavePoints])
+
+    const last7DaysTotalPaise = useMemo(() => {
+      return last7DaysWaveData.reduce((sum, d) => sum + d.amountPaise, 0)
+    }, [last7DaysWaveData])
+
+    const activeWaveIndex = waveHoverIndex !== null ? waveHoverIndex : 6
+    const activePoint = wavePoints[activeWaveIndex] || wavePoints[0]
+
+    const cashFlowBarData = useMemo(() => {
+      const dayMap = new Map<string, { date: string; label: string; incomePaise: number; expensePaise: number }>()
+      const sorted = [...transactions]
+        .filter((t) => t.status === 'completed')
+        .sort((a, b) => a.date.localeCompare(b.date))
+
+      sorted.forEach((t) => {
+        const dateKey = t.date.includes('T') ? t.date.split('T')[0] : t.date
+        const dObj = new Date(dateKey)
+        const label = !isNaN(dObj.getTime())
+          ? dObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : dateKey.slice(5, 10)
+
+        if (!dayMap.has(dateKey)) {
+          dayMap.set(dateKey, { date: dateKey, label, incomePaise: 0, expensePaise: 0 })
+        }
+        const entry = dayMap.get(dateKey)!
+        if (t.type === 'income') entry.incomePaise += t.amount
+        else if (t.type === 'expense') entry.expensePaise += t.amount
+      })
+
+      const entries = Array.from(dayMap.values())
+      const slice = entries.length > 10 ? entries.slice(-10) : entries
+      return slice.map((e) => ({
+        name: e.label,
+        income: Math.round(e.incomePaise / 100),
+        expense: Math.round(e.expensePaise / 100),
+        net: Math.round((e.incomePaise - e.expensePaise) / 100),
+      }))
+    }, [transactions])
+
+    const categoryBarData = useMemo(() => {
+      return summary.categoryTotals.slice(0, 8).map((c) => ({
+        name: c.category,
+        amount: Math.round(c.paise / 100),
+        color: c.color,
+      }))
+    }, [summary.categoryTotals])
+
     // Spending peak
     const peakDay = summary.dailySpending.reduce(
       (max, curr) => (curr.paise > max.paise ? curr : max),
       { date: '', day: '', paise: 0, rupees: 0 }
     )
 
+    const budgetStats = useMemo(() => {
+      const topCategories = summary.categoryTotals.slice(0, 3)
+      const defaults = [
+        { name: 'Groceries', pct: 68, color: '#ff9f5a' },
+        { name: 'Food & dining', pct: 43, color: '#6c8cff' },
+        { name: 'Transport', pct: 29, color: '#22c3a6' },
+      ]
+      if (topCategories.length === 0) return defaults
+      return defaults.map((d, i) => {
+        const cat = topCategories[i]
+        return cat
+          ? { name: cat.category, pct: cat.percentage || d.pct, color: cat.color || d.color }
+          : d
+      })
+    }, [summary.categoryTotals])
+
+    const dashOffset = (pct: number) => (163.4 * pct / 100).toFixed(1)
+
+    // Upcoming dues: planner upcoming instances or fallback
+    const upcomingDues = useMemo(() => {
+      return [
+        {
+          day: '23',
+          month: 'OCT',
+          name: 'Mobile recharge',
+          when: 'Due in 4 days',
+          amt: '₹299',
+          colorClass: 'orange',
+        },
+        {
+          day: '28',
+          month: 'OCT',
+          name: 'Monthly SIP',
+          when: 'Due in 9 days',
+          amt: '₹5,000',
+          colorClass: 'teal',
+        },
+      ]
+    }, [])
+
     return (
-      <>
-        <section className="page-heading">
-          <div>
-            <div className="eyebrow">
-              <i />
-              YOUR FINANCIAL PULSE
-            </div>
-            <h1>
-              Good evening, Arjun <span>✦</span>
-            </h1>
-            <p>
-              Here’s your money and life at a glance.{' '}
-              <b
+      <div className="liquid-dashboard-container">
+        {/* Top User Greeting Header */}
+        <div className="liquid-header">
+          <div className="liquid-avatar">A</div>
+          <div className="liquid-header-info">
+            <div className="liquid-greeting">Good evening</div>
+            <div className="liquid-username">Arjun Singh</div>
+          </div>
+          <div className="liquid-header-actions">
+            <button
+              className={`liquid-mode-pill ${isDemoMode ? 'demo' : 'real'}`}
+              onClick={() => toggleDemoMode()}
+              title="Click to toggle between Real Data and Demo Data"
+            >
+              <i
                 style={{
-                  cursor: 'pointer',
-                  color: isDemoMode ? 'var(--orange)' : 'var(--mint)',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: isDemoMode ? '#a3401a' : '#0b6b4a',
                 }}
-                onClick={() => toggleDemoMode()}
-                title="Click to toggle between Real Data and Demo Data"
+              />
+              {isDemoMode ? 'Demo Mode' : 'Live Data'}
+            </button>
+            <button
+              className="liquid-ai-round-btn"
+              onClick={() => go('AI Assistant')}
+              aria-label="Ask AI"
+              title="Ask AI Assistant"
+            >
+              <Sparkles size={20} />
+            </button>
+            <button
+              className="liquid-ai-round-btn"
+              onClick={() => setIsDrawerOpen(true)}
+              aria-label="All Modules"
+              title="All Modules"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="liquid-dashboard-grid">
+          {/* Left Column on Desktop */}
+          <div className="liquid-dashboard-col-left">
+            {/* Hero Card: Estimated Spendable with Liquid Waves */}
+            <div className="liquid-hero-card">
+              <svg className="liquid-hero-waves" viewBox="0 0 354 90" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 50 C40 20 80 20 120 45 C160 70 200 70 240 40 C280 15 320 25 354 45 L354 90 L0 90Z" fill="rgba(255,255,255,.14)" />
+                <path d="M0 62 C50 40 90 45 130 62 C170 80 220 75 260 55 C300 38 330 45 354 58 L354 90 L0 90Z" fill="rgba(255,255,255,.18)" />
+              </svg>
+              <div>
+                <div className="liquid-hero-top">
+                  <span className="liquid-hero-label">Estimated spendable</span>
+                  <span className="liquid-hero-badge">Protected</span>
+                </div>
+                <div className="liquid-hero-amount">
+                  {formatPaise(summary.estimatedSpendable)}
+                </div>
+                <div className="liquid-hero-sub">After planned bills &amp; SIPs</div>
+              </div>
+
+              <div className="liquid-hero-pill-row">
+                <div className="liquid-hero-pill">
+                  <span className="liquid-hero-pill-icon income">
+                    <ArrowDownLeft size={15} strokeWidth={2.5} />
+                  </span>
+                  <div>
+                    <div className="liquid-hero-pill-label">Income</div>
+                    <div className="liquid-hero-pill-val">{formatPaise(summary.totalConfirmedIncome)}</div>
+                  </div>
+                </div>
+                <div className="liquid-hero-pill">
+                  <span className="liquid-hero-pill-icon expense">
+                    <ArrowUpRight size={15} strokeWidth={2.5} />
+                  </span>
+                  <div>
+                    <div className="liquid-hero-pill-label">Expenses</div>
+                    <div className="liquid-hero-pill-val">{formatPaise(summary.totalConfirmedExpenses)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Action Buttons Grid */}
+            <div className="liquid-actions-grid">
+              <button
+                className="liquid-action-button scan"
+                onClick={() => setIsReceiptModalOpen(true)}
+                aria-label="Scan receipt"
+                title="Scan paper receipt or digital bill"
               >
-                {isDemoMode ? '● Demo workspace (Click for Real)' : '● Live database (IndexedDB)'}
-              </b>
-            </p>
-          </div>
-          <div className="heading-actions">
-            <button className="outline-button" onClick={() => setIsReceiptModalOpen(true)}>
-              <Upload size={15} />
-              Scan receipt
-            </button>
-            <button className="outline-button" onClick={handleExportCsv}>
-              <Download size={15} />
-              Export CSV
-            </button>
-            <button className="primary-button" onClick={handleOpenAddModal}>
-              <Plus size={17} />
-              Record transaction
-            </button>
-          </div>
-        </section>
+                <Upload size={22} strokeWidth={2} />
+                Scan
+              </button>
+              <button
+                id="dash-import-statement-btn"
+                className="liquid-action-button import"
+                onClick={() => setIsReconciliationModalOpen(true)}
+                aria-label="Import statement"
+                title="Upload Bank or UPI statements (PDF/CSV)"
+              >
+                <FileSpreadsheet size={22} strokeWidth={2} />
+                Import
+              </button>
+              <button
+                className="liquid-action-button export"
+                onClick={handleExportCsv}
+                aria-label="Export CSV"
+                title="Download authoritative ledger CSV"
+              >
+                <Download size={22} strokeWidth={2} />
+                Export
+              </button>
+              <button
+                className="liquid-action-button add"
+                onClick={handleOpenAddModal}
+                aria-label="Add transaction"
+                title="Record transaction"
+              >
+                <Plus size={22} strokeWidth={2} />
+                Add
+              </button>
+            </div>
 
-        {/* Top KPI Cards with exact integer paise calculations */}
-        <section className="summary-grid">
-          <article className="summary-card balance">
-            <div className="summary-label">
-              <span>Net Cash Flow / Recorded</span>
-              <WalletCards size={18} />
-            </div>
-            <strong>{formatPaise(summary.recordedBalance)}</strong>
-            <div className="card-footer">
-              <b>
-                <TrendingUp size={13} /> Active
-              </b>
-              <span>{transactions.length} total entries</span>
-            </div>
-            <i className="orb a" />
-            <i className="orb b" />
-          </article>
-
-          <article className="summary-card">
-            <div className="summary-label">
-              <span>Confirmed Income</span>
-              <i className="round green">
-                <ArrowDownLeft size={16} />
-              </i>
-            </div>
-            <strong>{formatPaise(summary.totalConfirmedIncome)}</strong>
-            <div className="card-footer">
-              <span>{summary.totalPendingIncome > 0 ? `+${formatPaise(summary.totalPendingIncome)} pending` : 'All settled'}</span>
-            </div>
-          </article>
-
-          <article className="summary-card">
-            <div className="summary-label">
-              <span>Net Confirmed Expenses</span>
-              <i className="round orange">
-                <ArrowUpRight size={16} />
-              </i>
-            </div>
-            <strong>{formatPaise(summary.totalConfirmedExpenses)}</strong>
-            <div className="card-footer muted">
-              <span>
-                {summary.totalRefunds > 0 ? `${formatPaise(summary.totalRefunds)} refunded` : 'Across categories'}
-              </span>
-            </div>
-          </article>
-
-          <article className="summary-card spendable">
-            <div className="summary-label">
-              <span>Estimated Spendable</span>
-              <i className="round purple">
-                <Sparkles size={15} />
-              </i>
-            </div>
-            <strong>{formatPaise(summary.estimatedSpendable)}</strong>
-            <div className="card-footer">
-              <span>After planned bills & SIPs</span>
-            </div>
-          </article>
-        </section>
-
-        {/* Charts & Breakdown */}
-        <section className="dashboard-grid">
-          {/* Spending Trend Chart */}
-          <article className="panel trend-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>Spending trend</h2>
-                <p>{isDemoMode ? 'October 2026 · Demo data' : 'Real-time recorded expenses'}</p>
+            {/* Recent Activity Card */}
+            <div className="liquid-recent-card">
+              <div className="liquid-recent-header">
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#1f1a3d' }}>Recent activity</div>
+                  <div style={{ fontSize: '12px', color: '#5b5780' }}>Authoritative local records</div>
+                </div>
+                <button className="liquid-link-btn" onClick={() => go('Transactions')}>
+                  View all <ChevronRight size={14} />
+                </button>
               </div>
-              <span className="status-pill completed">
-                {summary.dailySpending.length} active days
-              </span>
+              {summary.recentTransactions.length > 0 ? (
+                <div className="transaction-list">
+                  {summary.recentTransactions.slice(0, 4).map((item) => (
+                    <TransactionRow
+                      key={item.id}
+                      item={item}
+                      onEdit={handleOpenEditModal}
+                      onDelete={handleOpenDeleteModal}
+                      categoryMap={categoryMap}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '18px 12px' }}>
+                  <p>No transactions recorded yet</p>
+                  <button className="primary-button" onClick={handleOpenAddModal}>
+                    <Plus size={15} /> Add first entry
+                  </button>
+                </div>
+              )}
             </div>
+          </div>
 
-            <div className="chart-stat">
-              <div>
-                <strong>{formatPaise(summary.totalConfirmedExpenses)}</strong>
-                <span>spent in total</span>
+          {/* Right Column on Desktop */}
+          <div className="liquid-dashboard-col-right">
+            {/* Spending Trend Wave Card */}
+            <div className="liquid-card liquid-trend-card">
+              <div className="liquid-trend-header">
+                <div>
+                  <div className="liquid-trend-title">Spending trend</div>
+                  <div className="liquid-trend-sub">Last 7 days</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="liquid-trend-amount">
+                    {activePoint
+                      ? formatPaise(activePoint.amountPaise)
+                      : formatPaise(last7DaysTotalPaise)}
+                  </div>
+                  <div className="liquid-trend-metric" style={{ fontSize: '11px', color: '#7c3aed', fontWeight: 600 }}>
+                    {activePoint
+                      ? `${activePoint.fullDay}, ${activePoint.dateFormatted}`
+                      : `${formatPaise(last7DaysTotalPaise)} 7-day total`}
+                  </div>
+                </div>
               </div>
-              {summary.totalRefunds > 0 && (
-                <b>
-                  <RotateCcw size={12} /> {formatPaise(summary.totalRefunds)} refunded
-                </b>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+                <div style={{ display: 'flex', background: 'rgba(148, 163, 184, 0.15)', borderRadius: 10, padding: 2, gap: 2 }}>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsTab('cashflow')}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: 8,
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      border: 'none',
+                      background: analyticsTab === 'cashflow' ? '#ffffff' : 'transparent',
+                      color: analyticsTab === 'cashflow' ? '#6d3fe0' : '#5b5780',
+                      boxShadow: analyticsTab === 'cashflow' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                    }}
+                  >
+                    Wave
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsTab('categories')}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: 8,
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      border: 'none',
+                      background: analyticsTab === 'categories' ? '#ffffff' : 'transparent',
+                      color: analyticsTab === 'categories' ? '#6d3fe0' : '#5b5780',
+                      boxShadow: analyticsTab === 'categories' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                    }}
+                  >
+                    Inflow/Outflow
+                  </button>
+                </div>
+              </div>
+
+              {analyticsTab === 'cashflow' ? (
+                <>
+                  <div
+                    className="liquid-wave-interactive-wrap"
+                    onMouseMove={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                      setWaveHoverIndex(Math.min(6, Math.max(0, Math.round(relX * 6))))
+                    }}
+                    onTouchMove={(e) => {
+                      if (e.touches[0]) {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        const relX = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width))
+                        setWaveHoverIndex(Math.min(6, Math.max(0, Math.round(relX * 6))))
+                      }
+                    }}
+                    onMouseLeave={() => setWaveHoverIndex(null)}
+                    onTouchEnd={() => setWaveHoverIndex(null)}
+                    style={{ position: 'relative', width: '100%', height: '110px', marginTop: '6px', cursor: 'crosshair' }}
+                  >
+                    {/* Floating liquid glass tooltip anchored to active point */}
+                    {activePoint && (
+                      <div
+                        className="liquid-wave-tooltip"
+                        style={{
+                          position: 'absolute',
+                          left: `${(activePoint.x / 320) * 100}%`,
+                          top: `${Math.max(4, activePoint.y - 36)}px`,
+                          transform: 'translate(-50%, -100%)',
+                          pointerEvents: 'none',
+                          whiteSpace: 'nowrap',
+                          zIndex: 10,
+                        }}
+                      >
+                        <span style={{ fontSize: '10px', color: '#6d6796', display: 'block' }}>
+                          {activePoint.fullDay}, {activePoint.dateFormatted}
+                        </span>
+                        <strong style={{ fontSize: '12px', color: '#1e1b4b', fontWeight: 800 }}>
+                          {formatPaise(activePoint.amountPaise)}
+                        </strong>
+                      </div>
+                    )}
+
+                    <svg
+                      width="100%"
+                      height="110"
+                      viewBox="0 0 320 110"
+                      preserveAspectRatio="none"
+                      style={{ display: 'block' }}
+                      role="img"
+                      aria-label="Interactive 7-day spending wave"
+                    >
+                      <defs>
+                        <linearGradient id="lgWv" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.55" />
+                          <stop offset="60%" stopColor="#8b5cf6" stopOpacity="0.18" />
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="lgWl" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#38bdf8" />
+                          <stop offset="45%" stopColor="#8b5cf6" />
+                          <stop offset="100%" stopColor="#ec4899" />
+                        </linearGradient>
+                        <filter id="waveGlow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#8b5cf6" floodOpacity="0.4" />
+                        </filter>
+                      </defs>
+                      {/* Wave fill area */}
+                      <path d={waveAreaPath} fill="url(#lgWv)" />
+                      {/* Wave stroke line */}
+                      <path
+                        d={waveLinePath}
+                        fill="none"
+                        stroke="url(#lgWl)"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        filter="url(#waveGlow)"
+                      />
+                      {/* Interactive Crosshair & Cursor Anchor */}
+                      {activePoint && (
+                        <>
+                          <line
+                            x1={activePoint.x}
+                            y1={activePoint.y}
+                            x2={activePoint.x}
+                            y2={110}
+                            stroke="#8b5cf6"
+                            strokeWidth="1.5"
+                            strokeDasharray="3 3"
+                            opacity="0.8"
+                          />
+                          {/* Outer pulse aura */}
+                          <circle
+                            cx={activePoint.x}
+                            cy={activePoint.y}
+                            r="10"
+                            fill="#8b5cf6"
+                            fillOpacity="0.18"
+                          />
+                          {/* Inner glowing dot */}
+                          <circle
+                            cx={activePoint.x}
+                            cy={activePoint.y}
+                            r="5.5"
+                            fill="#ffffff"
+                            stroke="#8b5cf6"
+                            strokeWidth="3"
+                            style={{ filter: 'drop-shadow(0 2px 4px rgba(139,92,246,0.5))' }}
+                          />
+                        </>
+                      )}
+                    </svg>
+                  </div>
+
+                  {/* Synchronized 7 Day Pills */}
+                  <div className="liquid-trend-days">
+                    {last7DaysWaveData.map((d, i) => (
+                      <button
+                        key={`${d.dateStr}-${i}`}
+                        type="button"
+                        onClick={() => setWaveHoverIndex(i)}
+                        onMouseEnter={() => setWaveHoverIndex(i)}
+                        className={`liquid-trend-day ${i === activeWaveIndex ? 'active' : ''}`}
+                        title={`${d.fullDay}, ${d.dateFormatted}: ${formatPaise(d.amountPaise)}`}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+                      >
+                        {d.dayLabel}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div style={{ width: '100%', height: 130 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={
+                        cashFlowBarData.length > 0
+                          ? cashFlowBarData
+                          : [
+                              { name: '1 Oct', income: 15000, expense: 4200 },
+                              { name: '5 Oct', income: 12000, expense: 6800 },
+                              { name: '10 Oct', income: 28000, expense: 11500 },
+                              { name: '15 Oct', income: 9000, expense: 7400 },
+                              { name: '20 Oct', income: 38000, expense: 14200 },
+                            ]
+                      }
+                      margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="waveIncomeGradLg" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#0b6b4a" stopOpacity="0.55" />
+                          <stop offset="1" stopColor="#0b6b4a" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="waveExpenseGradLg" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
+                          <stop offset="1" stopColor="#8b5cf6" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" stroke="#5b5780" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#5b5780" fontSize={10} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+                      <Tooltip
+                        formatter={(value: any, name: any) => [
+                          `₹${Number(value).toLocaleString('en-IN')}`,
+                          name === 'income' ? 'Income' : 'Expense',
+                        ]}
+                        contentStyle={{
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          border: '1px solid rgba(255, 255, 255, 0.9)',
+                          borderRadius: '14px',
+                          color: '#1f1a3d',
+                          fontSize: '11px',
+                        }}
+                      />
+                      <Area type="monotone" dataKey="income" stroke="#0b6b4a" strokeWidth={2.5} fill="url(#waveIncomeGradLg)" />
+                      <Area type="monotone" dataKey="expense" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#waveExpenseGradLg)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
 
-            {summary.dailySpending.length > 0 ? (
-              <div className="area-wrap ios-area">
-                {peakDay.paise > 0 && (
-                  <div className="chart-callout">
-                    <b>{formatPaise(peakDay.paise)}</b>
-                    <span>{peakDay.day} Oct · peak</span>
-                  </div>
-                )}
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={summary.dailySpending} margin={{ top: 24, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="iosArea" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0" stopColor="#7d74f7" stopOpacity=".65" />
-                        <stop offset=".62" stopColor="#8cc9ff" stopOpacity=".22" />
-                        <stop offset="1" stopColor="#b9e3ff" stopOpacity="0" />
-                      </linearGradient>
-                      <filter id="iosGlow" x="-20%" y="-30%" width="140%" height="160%">
-                        <feGaussianBlur stdDeviation="3" result="blur" />
-                        <feMerge>
-                          <feMergeNode in="blur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    <XAxis dataKey="day" hide />
-                    <YAxis hide />
-                    <Tooltip
-                      cursor={{ stroke: 'rgba(104,86,221,.34)', strokeWidth: 1, strokeDasharray: '3 5' }}
-                      contentStyle={{
-                        background: 'rgba(255,255,255,.92)',
-                        border: '1px solid rgba(255,255,255,.9)',
-                        borderRadius: 14,
-                        color: '#17213b',
-                        boxShadow: '0 12px 30px rgba(71,79,126,.18)',
-                        fontSize: 11,
-                      }}
-                      formatter={(val: unknown) => [formatPaise(Number(val) * 100), 'Spent']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="rupees"
-                      stroke="#7066e8"
-                      strokeWidth={3.25}
-                      fill="url(#iosArea)"
-                      filter="url(#iosGlow)"
-                      activeDot={{ r: 5, fill: '#fff', stroke: '#7066e8', strokeWidth: 3 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+            {/* Budget Health Card with 3D Liquid Glass Core */}
+            <div className="liquid-card liquid-budget-card" onClick={() => go('Budgets & Savings')} style={{ cursor: 'pointer' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: '#1f1a3d' }}>
+                Budget health
               </div>
-            ) : (
-              <div className="chart-empty">No expense entries recorded yet</div>
-            )}
-
-            <div className="chart-timeline">
-              <span>Start</span>
-              <span>Mid</span>
-              <span className="active">Current</span>
-            </div>
-          </article>
-
-          {/* Category Distribution Donut */}
-          <article className="panel category-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>By category</h2>
-                <p>Where your money went</p>
-              </div>
-              <button className="text-button" onClick={() => go('Transactions')}>
-                View all <ChevronRight size={15} />
-              </button>
-            </div>
-
-            {summary.categoryTotals.length > 0 ? (
-              <div className="category-content">
-                <div className="donut">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={summary.categoryTotals}
-                        dataKey="paise"
-                        innerRadius={50}
-                        outerRadius={71}
-                        paddingAngle={4}
-                        stroke="none"
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        {summary.categoryTotals.map((item) => (
-                          <Cell key={item.category} fill={item.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <span>
-                    <b>{formatPaise(summary.totalConfirmedExpenses)}</b>
-                    <small>spent</small>
-                  </span>
-                </div>
-                <div className="legend">
-                  {summary.categoryTotals.slice(0, 4).map((item) => (
-                    <div key={item.category}>
-                      <i style={{ background: item.color }} />
-                      <span>{item.category}</span>
-                      <b>{item.percentage}%</b>
+              <div className="liquid-budget-rings">
+                {budgetStats.map((g, i) => (
+                  <div key={g.name} className="liquid-budget-ring-item">
+                    <div className="liquid-ring-box">
+                      <svg width="76" height="76" viewBox="0 0 64 64" aria-hidden="true">
+                        <defs>
+                          {/* Radial Liquid Glass 3D Sphere Core */}
+                          <radialGradient id={`liquidGlassCore-${i}`} cx="35%" cy="30%" r="70%">
+                            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+                            <stop offset="35%" stopColor={g.color} stopOpacity="0.22" />
+                            <stop offset="85%" stopColor={g.color} stopOpacity="0.38" />
+                            <stop offset="100%" stopColor={g.color} stopOpacity="0.12" />
+                          </radialGradient>
+                          <linearGradient id={`ringGrad-${i}`} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={g.color} />
+                            <stop offset="100%" stopColor="#a855f7" />
+                          </linearGradient>
+                          <filter id={`ringGlow-${i}`} x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={g.color} floodOpacity="0.35" />
+                          </filter>
+                        </defs>
+                        {/* 3D Liquid Glass Inside Orb */}
+                        <circle cx="32" cy="32" r="21" fill={`url(#liquidGlassCore-${i})`} />
+                        {/* Specular Light Reflection Crescent */}
+                        <ellipse cx="32" cy="20" rx="12" ry="5" fill="#ffffff" fillOpacity="0.5" />
+                        {/* Glass edge rim */}
+                        <circle cx="32" cy="32" r="21" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
+                        {/* Track ring */}
+                        <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(139,92,246,0.12)" strokeWidth="7" />
+                        {/* Active Progress Arc with Liquid Glow */}
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="26"
+                          fill="none"
+                          stroke={`url(#ringGrad-${i})`}
+                          strokeWidth="7"
+                          strokeLinecap="round"
+                          strokeDasharray={`${dashOffset(g.pct)} 163.4`}
+                          transform="rotate(-90 32 32)"
+                          filter={`url(#ringGlow-${i})`}
+                        />
+                      </svg>
+                      <div className="liquid-ring-val" style={{ zIndex: 2 }}>{g.pct}%</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="chart-empty">No categorized expenses recorded</div>
-            )}
-          </article>
-
-          {/* Recent Activity Panel */}
-          <article className="panel recent-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>Recent activity</h2>
-                <p>Authoritative local records</p>
-              </div>
-              <button className="text-button" onClick={() => go('Transactions')}>
-                View all <ChevronRight size={15} />
-              </button>
-            </div>
-
-            {summary.recentTransactions.length > 0 ? (
-              <div className="transaction-list">
-                {summary.recentTransactions.slice(0, 4).map((item) => (
-                  <TransactionRow
-                    key={item.id}
-                    item={item}
-                    onEdit={handleOpenEditModal}
-                    onDelete={handleOpenDeleteModal}
-                    categoryMap={categoryMap}
-                  />
+                    <div className="liquid-ring-name">{g.name}</div>
+                  </div>
                 ))}
               </div>
-            ) : (
-              <div className="empty-state" style={{ padding: '24px 12px' }}>
-                <p>No transactions yet</p>
-                <button className="primary-button" onClick={handleOpenAddModal}>
-                  <Plus size={15} /> Add first entry
-                </button>
-              </div>
-            )}
-          </article>
-
-          {/* Budget Health Panel */}
-          <article className="panel budget-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>Budget health</h2>
-                <p>Tracked against plan</p>
-              </div>
-              <span className="status-pill completed">Protected</span>
             </div>
-            <div className="budget-list">
-              {[
-                ['Groceries', 68, '#3dd9b3'],
-                ['Food & dining', 43, '#9c7cff'],
-                ['Transport', 29, '#f6b94d'],
-              ].map(([name, value, color]) => (
-                <div className="budget-line" key={String(name)}>
-                  <div>
-                    <span>{name}</span>
-                    <b>{value}%</b>
-                  </div>
-                  <p>
-                    <i style={{ width: `${value}%`, background: String(color) }} />
-                  </p>
+
+            {/* Money Mate AI Card */}
+            <div className="liquid-ai-card" onClick={() => go('AI Assistant')}>
+              <div className="liquid-ai-icon-box">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <div className="liquid-ai-title">Money Mate AI</div>
+                <div className="liquid-ai-desc">
+                  You have headroom after your upcoming ₹5,000 SIP and ₹3,200 commitments.
+                </div>
+              </div>
+            </div>
+
+            {/* Upcoming Dues (2 Cards) */}
+            <div className="liquid-dues-grid">
+              {upcomingDues.map((u) => (
+                <div key={u.name} className={`liquid-due-card ${u.colorClass}`} onClick={() => go('Planner')}>
+                  <div className="liquid-due-day">{u.day} {u.month}</div>
+                  <div className="liquid-due-name">{u.name}</div>
+                  <div className="liquid-due-when">{u.when}</div>
+                  <div className="liquid-due-amt">{u.amt}</div>
                 </div>
               ))}
             </div>
-            <button className="wide-button" onClick={() => go('Budgets & Savings')}>
-              Open budgets <ChevronRight size={16} />
-            </button>
-          </article>
-        </section>
-
-        {/* Lower Intelligence Grid */}
-        <section className="bottom-grid">
-          <article className="ai-card">
-            <div className="ai-top">
-              <div className="ai-avatar">
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <b>Money Mate AI</b>
-                <span>
-                  {isDemoMode ? 'Demo workspace insight' : 'Grounded in IndexedDB records'}
-                </span>
-              </div>
-              <button onClick={() => notify('Insight dismissed for now.')}>
-                <X size={15} />
-              </button>
-            </div>
-            <h2>
-              Spendable buffer: <em>{formatPaise(summary.estimatedSpendable)}</em>
-            </h2>
-            <p>
-              After accounting for your upcoming ₹5,000 SIP and ₹3,200 commitments, you have ample
-              headroom for daily necessities.
-            </p>
-            <button onClick={() => go('AI Assistant')}>
-              See my plan <ChevronRight size={16} />
-            </button>
-            <i />
-          </article>
-
-          <article className="panel commitments">
-            <div className="panel-heading">
-              <div>
-                <h2>Coming up</h2>
-                <p>Your next commitments</p>
-              </div>
-              <button className="text-button" onClick={() => go('Planner')}>
-                Planner <ChevronRight size={15} />
-              </button>
-            </div>
-            <Commitment date="23" month="OCT" title="Mobile recharge" detail="Due in 4 days · ₹299" />
-            <Commitment date="28" month="OCT" title="Monthly SIP" detail="Due in 9 days · ₹5,000" mint />
-          </article>
-
-          <article className="panel commitments">
-            <div className="panel-heading">
-              <div>
-                <h2>Needs attention</h2>
-                <p>Inventory signals</p>
-              </div>
-              <button className="text-button" onClick={() => go('My Inventory')}>
-                Inventory <ChevronRight size={15} />
-              </button>
-            </div>
-            <Attention emoji="🧴" title="Shampoo" detail="About 20% remaining" tag="Low" />
-            <Attention
-              shirt
-              title="Formal shirts"
-              detail="4 items logged"
-              button={() => notify('Added to your smart shopping list.')}
-            />
-          </article>
-        </section>
-      </>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -1200,8 +1601,8 @@ function App() {
         </div>
 
         {/* Transactions Table / List */}
-        <article className="panel table-panel">
-          <div className="table-head" style={{ gridTemplateColumns: 'minmax(150px, 1fr) 130px 100px 70px' }}>
+        <article className="panel table-panel liquid-tx-container">
+          <div className="table-head liquid-tx-grid liquid-tx-head">
             <span>Transaction</span>
             <span>Date</span>
             <span style={{ textAlign: 'right' }}>Amount</span>
@@ -1221,6 +1622,7 @@ function App() {
                   onEdit={handleOpenEditModal}
                   onDelete={handleOpenDeleteModal}
                   categoryMap={categoryMap}
+                  isTableView={true}
                 />
               ))}
             </div>
@@ -1240,8 +1642,8 @@ function App() {
                   <button className="primary-button" onClick={handleOpenAddModal}>
                     <Plus size={16} /> Record first transaction
                   </button>
-                  <button className="outline-button" onClick={loadDemoDataIntoWorkspace}>
-                    Load sample records
+                  <button className="outline-button" onClick={() => toggleDemoMode(true)}>
+                    Preview Demo Sandbox
                   </button>
                 </div>
               ) : (
@@ -1269,96 +1671,490 @@ function App() {
   }
 
   /* ------------------- Other Pages ------------------- */
-  const Budgets = () => (
-    <section className="section-page">
-      <PageTitle
-        eyebrow="PLAN WITH PURPOSE"
-        title="Budgets & savings"
-        text="Give every rupee a job—then see your progress."
-        action={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="primary-button" onClick={() => go('Financial Insights')}>
-              <Sparkles size={15} />
-              Open Financial Insights
-            </button>
-            <button className="outline-button" onClick={() => notify('Budget creation arrives in the next milestone.')}>
-              <Plus size={15} />
-              Create budget
-            </button>
-          </div>
+  /* ------------------- Budgets & Savings Page (Animated Liquid Glass) ------------------- */
+  const Budgets = () => {
+    const [budgetWaveView, setBudgetWaveView] = useState<'category' | 'trajectory'>('category')
+
+    // Real-time Database Goal & Savings Stats
+    const currentSavedRupees = Math.max(0, Math.round(summary.netCashFlow / 100))
+    const savingsGoalPct = Math.min(100, Math.round((currentSavedRupees / emergencyGoalRupees) * 100))
+
+    // Total monthly budget in rupees
+    const totalBudgetRupees = userBudgetPaise ? Math.round(userBudgetPaise / 100) : 45000
+    const totalSpentRupees = Math.round(summary.totalConfirmedExpenses / 100)
+
+    // Real-time upcoming investment / SIP from Planner
+    const upcomingInvestment = useMemo(() => {
+      const foundBill = bills.find(
+        (b) =>
+          b.status === 'pending' &&
+          (b.category?.toLowerCase().includes('sip') ||
+            b.category?.toLowerCase().includes('invest') ||
+            b.title?.toLowerCase().includes('sip'))
+      )
+      if (foundBill) {
+        return {
+          title: foundBill.title,
+          amountPaise: foundBill.amountPaise,
+          dueDate: `Due on ${new Date(foundBill.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+          isReal: true,
         }
-      />
-      <article className="goal">
-        <i>
-          <Target size={25} />
-        </i>
-        <div>
-          <span>PRIMARY GOAL</span>
-          <h2>Emergency fund</h2>
-          <p>₹18,500 of ₹60,000 saved · on pace for April 2027</p>
-        </div>
-        <b>31%</b>
-        <em>
-          <i />
-        </em>
-      </article>
-      <div className="analytics">
-        <article className="panel bars">
-          <div className="panel-heading">
-            <div>
-              <h2>Monthly categories</h2>
-              <p>October 2026</p>
+      }
+      const foundSched = schedules.find(
+        (s) =>
+          s.isActive &&
+          (s.category?.toLowerCase().includes('sip') ||
+            s.category?.toLowerCase().includes('invest') ||
+            s.title?.toLowerCase().includes('sip'))
+      )
+      if (foundSched) {
+        return {
+          title: foundSched.title,
+          amountPaise: foundSched.amountPaise,
+          dueDate: `Every ${foundSched.dayOfMonth || 28}th`,
+          isReal: true,
+        }
+      }
+      const anyPending = bills.find((b) => b.status === 'pending')
+      if (anyPending) {
+        return {
+          title: anyPending.title,
+          amountPaise: anyPending.amountPaise,
+          dueDate: `Due on ${new Date(anyPending.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+          isReal: true,
+        }
+      }
+      return {
+        title: 'Monthly Index SIP',
+        amountPaise: 500000,
+        dueDate: 'Scheduled 28th',
+        isReal: false,
+      }
+    }, [bills, schedules])
+
+    // Real-time category wave data
+    const categoryWaveData = useMemo(() => {
+      if (summary.categoryTotals.length > 0) {
+        return summary.categoryTotals.map((c) => {
+          const spent = Math.round(c.paise / 100)
+          const customBudget = categoryBudgets[c.category]
+          const budget = customBudget !== undefined
+            ? customBudget
+            : Math.max(Math.round(totalBudgetRupees * (c.percentage / 100 || 0.15)), Math.round(spent * 1.25))
+          return {
+            name: c.category,
+            spent,
+            budget,
+            percentage: c.percentage,
+            color: c.color || '#8b5cf6',
+            count: c.count,
+          }
+        })
+      }
+      return [
+        { name: 'Food & Dining', spent: 3450, budget: 6000, percentage: 38, color: '#ff9f5a', count: 14 },
+        { name: 'Groceries', spent: 2890, budget: 4500, percentage: 32, color: '#6c8cff', count: 9 },
+        { name: 'Transport', spent: 1200, budget: 2500, percentage: 14, color: '#22c3a6', count: 6 },
+        { name: 'Shopping', spent: 980, budget: 2000, percentage: 11, color: '#ec4899', count: 4 },
+        { name: 'Entertainment', spent: 540, budget: 1500, percentage: 5, color: '#a855f7', count: 2 },
+      ]
+    }, [summary.categoryTotals, categoryBudgets, totalBudgetRupees])
+
+    // Trajectory wave data across daily spending
+    const trajectoryWaveData = useMemo(() => {
+      if (summary.dailySpending.length > 0) {
+        return summary.dailySpending.map((d) => ({
+          name: d.day || d.date.slice(-5),
+          spent: Math.round(d.paise / 100),
+          budget: Math.round(totalBudgetRupees / 30),
+        }))
+      }
+      return [
+        { name: 'Mon', spent: 450, budget: 1500 },
+        { name: 'Tue', spent: 890, budget: 1500 },
+        { name: 'Wed', spent: 320, budget: 1500 },
+        { name: 'Thu', spent: 1250, budget: 1500 },
+        { name: 'Fri', spent: 670, budget: 1500 },
+        { name: 'Sat', spent: 1840, budget: 1500 },
+        { name: 'Sun', spent: 510, budget: 1500 },
+      ]
+    }, [summary.dailySpending, totalBudgetRupees])
+
+    return (
+      <section className="section-page budget-page-container">
+        {/* Page Title & Actions */}
+        <PageTitle
+          eyebrow="PLAN WITH PURPOSE"
+          title="Budgets & savings"
+          text="Live, database-synced category wave analytics, goals, and recurring investments."
+          action={
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button className="primary-button" onClick={() => setIsBudgetModalOpen(true)}>
+                <Sliders size={15} />
+                Adjust Budgets &amp; Goals
+              </button>
+              <button className="outline-button" onClick={() => go('Financial Insights')}>
+                <Sparkles size={15} />
+                Open Insights
+              </button>
             </div>
-            <button className="select-button">
-              October <ChevronDown size={15} />
-            </button>
+          }
+        />
+
+        {/* Primary Goal: Emergency Fund & Net Savings Hero Card */}
+        <div className="budget-hero-goal">
+          <svg className="budget-hero-wave-bg" viewBox="0 0 700 90" preserveAspectRatio="none" aria-hidden="true">
+            <path
+              d="M0 45 C100 15 200 65 350 40 C500 15 600 60 700 35 L700 90 L0 90Z"
+              fill="url(#goalWaveGradient)"
+            />
+            <defs>
+              <linearGradient id="goalWaveGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#c026d3" stopOpacity="0.3" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <div className="budget-hero-content">
+            <div className="budget-hero-top">
+              <div>
+                <span className="budget-goal-badge">
+                  <Target size={13} /> PRIMARY GOAL
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '6px 0 2px', color: '#1f1a3d' }}>
+                  Emergency fund
+                </h2>
+                <p style={{ margin: 0, fontSize: '12px', color: '#5b5780' }}>
+                  ₹{currentSavedRupees.toLocaleString('en-IN')} of ₹{emergencyGoalRupees.toLocaleString('en-IN')} saved
+                  {' · '}
+                  <span style={{ color: savingsGoalPct >= 50 ? '#0b6b4a' : '#6d3fe0', fontWeight: 700 }}>
+                    {savingsGoalPct >= 100 ? 'Goal fully achieved!' : `${savingsGoalPct}% funded`}
+                  </span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <span className="budget-live-indicator">
+                  <i className="live-dot" /> Live DB Sync
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBudgetModalOpen(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#6d3fe0',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: 0,
+                  }}
+                >
+                  <Edit2 size={12} /> Edit Target
+                </button>
+              </div>
+            </div>
+
+            {/* Fluid Progress Bar with Animated Liquid Ripple */}
+            <div className="budget-progress-track">
+              <div
+                className="budget-progress-fill"
+                style={{ width: `${Math.max(4, savingsGoalPct)}%` }}
+              />
+            </div>
+
+            {/* Quick Stat Pill Grid */}
+            <div className="budget-hero-stats">
+              <div className="budget-stat-box">
+                <div className="budget-stat-label">Net Saved (Ledger)</div>
+                <div className="budget-stat-value mint">₹{currentSavedRupees.toLocaleString('en-IN')}</div>
+              </div>
+              <div className="budget-stat-box">
+                <div className="budget-stat-label">Total Monthly Budget</div>
+                <div className="budget-stat-value">₹{totalBudgetRupees.toLocaleString('en-IN')}</div>
+              </div>
+              <div className="budget-stat-box">
+                <div className="budget-stat-label">Spent This Month</div>
+                <div className="budget-stat-value highlight">{formatPaise(summary.totalConfirmedExpenses)}</div>
+              </div>
+              <div className="budget-stat-box">
+                <div className="budget-stat-label">Budget Headroom</div>
+                <div className="budget-stat-value" style={{ color: totalSpentRupees > totalBudgetRupees ? '#ef4444' : '#0b6b4a' }}>
+                  {totalSpentRupees > totalBudgetRupees ? '-' : ''}₹{Math.abs(totalBudgetRupees - totalSpentRupees).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[
-                  { name: 'Food', plan: 6000, used: 2580 },
-                  { name: 'Home', plan: 3000, used: 2100 },
-                  { name: 'Travel', plan: 2500, used: 720 },
-                  { name: 'Fun', plan: 2500, used: 1120 },
-                ]}
+        </div>
+
+        {/* 2-Column Main Wave Analytics & SIP Section */}
+        <div className="budget-main-grid">
+          
+          {/* Monthly Categories Wave Presentation Card */}
+          <div className="budget-wave-panel">
+            <div className="budget-wave-header">
+              <div className="budget-wave-title">
+                <h2>Monthly categories wave</h2>
+                <p>Transparent spline wave presentation of spent vs planned allocations</p>
+              </div>
+
+              <div className="budget-wave-toggle-group">
+                <button
+                  type="button"
+                  className={`budget-wave-toggle-btn ${budgetWaveView === 'category' ? 'active' : ''}`}
+                  onClick={() => setBudgetWaveView('category')}
+                >
+                  Category Wave
+                </button>
+                <button
+                  type="button"
+                  className={`budget-wave-toggle-btn ${budgetWaveView === 'trajectory' ? 'active' : ''}`}
+                  onClick={() => setBudgetWaveView('trajectory')}
+                >
+                  Daily Flow
+                </button>
+              </div>
+            </div>
+
+            {/* The Transparent SVG Wave Chart */}
+            <div className="budget-wave-chart-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={budgetWaveView === 'category' ? categoryWaveData : trajectoryWaveData}
+                  margin={{ top: 14, right: 38, left: 14, bottom: 26 }}
+                >
+                  <defs>
+                    <linearGradient id="waveSpentGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.65} />
+                      <stop offset="50%" stopColor="#38bdf8" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="waveBudgetGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ff8fb1" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#ff8fb1" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    padding={{ left: 16, right: 32 }}
+                    interval={0}
+                    tick={{ fill: '#5b5780', fontSize: 11, fontWeight: 550 }}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null
+                      const d = payload[0].payload
+                      return (
+                        <div
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.92)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.95)',
+                            borderRadius: '14px',
+                            padding: '10px 14px',
+                            boxShadow: '0 10px 25px rgba(109, 63, 224, 0.18)',
+                            fontSize: '12px',
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, color: '#1f1a3d', marginBottom: '4px' }}>
+                            {d.name}
+                          </div>
+                          <div style={{ color: '#6d3fe0', fontWeight: 700 }}>
+                            Spent: ₹{(d.spent || 0).toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ color: '#5b5780' }}>
+                            Planned: ₹{(d.budget || 0).toLocaleString('en-IN')}
+                          </div>
+                          {d.percentage !== undefined && (
+                            <div style={{ color: '#0b6b4a', fontSize: '10px', marginTop: '2px', fontWeight: 600 }}>
+                              {d.percentage}% of total expenses
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }}
+                  />
+                  {/* Budget Reference Wave */}
+                  <Area
+                    type="natural"
+                    dataKey="budget"
+                    stroke="#ff8fb1"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    fill="url(#waveBudgetGradient)"
+                  />
+                  {/* Actual Spent Fluid Wave */}
+                  <Area
+                    type="natural"
+                    dataKey="spent"
+                    stroke="#8b5cf6"
+                    strokeWidth={3.5}
+                    fill="url(#waveSpentGradient)"
+                    dot={{ fill: '#ffffff', stroke: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ fill: '#38bdf8', stroke: '#ffffff', strokeWidth: 3, r: 7 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Wave Legend */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', fontSize: '11px', color: '#5b5780', fontWeight: 600 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <i style={{ width: '12px', height: '3px', borderRadius: '2px', background: '#8b5cf6' }} />
+                Actual Spent Wave
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <i style={{ width: '12px', height: '2px', borderRadius: '2px', background: '#ff8fb1', borderTop: '1px dashed #ff8fb1' }} />
+                Budget Guideline Wave
+              </span>
+            </div>
+          </div>
+
+          {/* Right Column: Next Investment / SIP Card */}
+          <div className="budget-sip-card">
+            <div>
+              <div className="budget-sip-top">
+                <div className="budget-sip-icon">
+                  <CircleDollarSign size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#0b6b4a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    NEXT INVESTMENT / SIP
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1f1a3d' }}>
+                    {upcomingInvestment.title}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="budget-sip-amount">
+                {formatPaise(upcomingInvestment.amountPaise)}
+              </div>
+              <p className="budget-sip-desc">
+                {upcomingInvestment.dueDate}
+                {upcomingInvestment.isReal && ' · Synchronized from Planner'}
+              </p>
+
+              <div style={{ padding: '12px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.7)', border: '1px solid rgba(255, 255, 255, 0.9)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '6px' }}>
+                  <span style={{ color: '#5b5780' }}>Monthly Investment Pace</span>
+                  <strong style={{ color: '#0b6b4a' }}>On Schedule</strong>
+                </div>
+                <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(148, 163, 184, 0.2)', overflow: 'hidden' }}>
+                  <div style={{ width: '85%', height: '100%', background: 'linear-gradient(90deg, #10b981, #06b6d4)' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="outline-button"
+                style={{ flex: 1, padding: '10px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}
+                onClick={() => go('Planner')}
               >
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#8490a9', fontSize: 11 }} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ background: '#171a27', border: '1px solid #30364b', borderRadius: 10 }} />
-                <Bar dataKey="plan" fill="#293147" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="used" fill="#8370ee" radius={[5, 5, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+                View in Planner <ChevronRight size={14} />
+              </button>
+              <button
+                className="primary-button"
+                style={{ padding: '10px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}
+                onClick={() => {
+                  setEditingSchedule(null)
+                  setIsScheduleModalOpen(true)
+                }}
+                title="Create a new recurring SIP or commitment"
+              >
+                <Plus size={14} /> Add SIP
+              </button>
+            </div>
           </div>
-          <p>
-            <span>
-              <i />
-              Budgeted
+        </div>
+
+        {/* Category Budget Cards Grid */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#1f1a3d' }}>
+              Category Allocations &amp; Real-Time Tracking
+            </h3>
+            <span style={{ fontSize: '12px', color: '#5b5780' }}>
+              Click any category card to configure its limit
             </span>
-            <span>
-              <i />
-              Used
-            </span>
-          </p>
-        </article>
-        <article className="panel sip">
-          <span>NEXT INVESTMENT</span>
-          <div>
-            <i>
-              <CircleDollarSign size={24} />
-            </i>
-            Index fund SIP
           </div>
-          <strong>₹5,000</strong>
-          <p>Scheduled for 28 Oct</p>
-          <button className="outline-button" onClick={() => go('Planner')}>
-            View schedule <ChevronRight size={15} />
-          </button>
-        </article>
-      </div>
-    </section>
-  )
+
+          <div className="budget-categories-grid">
+            {categoryWaveData.map((cat) => {
+              const spentPct = Math.min(100, Math.round((cat.spent / (cat.budget || 1)) * 100))
+              const isExceeded = cat.spent > cat.budget
+              const isWarning = spentPct >= 80 && !isExceeded
+              const badgeClass = isExceeded ? 'exceeded' : isWarning ? 'warning' : 'safe'
+              const badgeText = isExceeded ? 'Exceeded' : isWarning ? 'Near Limit' : 'On Track'
+
+              return (
+                <div
+                  key={cat.name}
+                  className="budget-category-card"
+                  onClick={() => {
+                    setEditingBudgetCategory(cat.name)
+                    setIsBudgetModalOpen(true)
+                  }}
+                  title="Click to customize category budget"
+                >
+                  <div className="budget-category-header">
+                    <div className="budget-cat-left">
+                      <div
+                        className="budget-cat-icon"
+                        style={{
+                          background: `${cat.color}22`,
+                          color: cat.color,
+                        }}
+                      >
+                        <Tag size={18} />
+                      </div>
+                      <div>
+                        <div className="budget-cat-name">{cat.name}</div>
+                        <div className="budget-cat-count">{cat.count} transactions recorded</div>
+                      </div>
+                    </div>
+                    <span className={`budget-cat-badge ${badgeClass}`}>{badgeText}</span>
+                  </div>
+
+                  <div className="budget-cat-bar-wrap">
+                    <div
+                      className="budget-cat-bar-fill"
+                      style={{
+                        width: `${spentPct}%`,
+                        background: isExceeded
+                          ? '#ef4444'
+                          : isWarning
+                          ? '#f59e0b'
+                          : `linear-gradient(90deg, ${cat.color}, #38bdf8)`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="budget-cat-footer">
+                    <span>
+                      Spent: <strong>₹{cat.spent.toLocaleString('en-IN')}</strong>
+                    </span>
+                    <span>
+                      Budget: <strong>₹{cat.budget.toLocaleString('en-IN')}</strong>
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   const Inventory = () => (
     <section className="section-page">
@@ -2527,17 +3323,41 @@ function App() {
 
         <div>
           <p>
-            <b>Sample Data Management</b>
-            <span>Import initial starter transactions into your real workspace.</span>
+            <b>Purge Mock & Sample Data</b>
+            <span>Safely delete all mock, demo, and starter data from your real database, preserving only authentic imports.</span>
           </p>
           <button
             className="outline-button"
             onClick={async () => {
-              await loadDemoDataIntoWorkspace()
-              notify('Sample records loaded into your real workspace!')
+              const purged = await purgeMockDataFromRealDB()
+              notify(
+                purged > 0
+                  ? `Successfully purged ${purged} mock records from your database!`
+                  : 'Workspace clean: No mock data was found.'
+              )
             }}
           >
-            Load samples into Real DB
+            Purge Mock Data
+          </button>
+        </div>
+
+        <div>
+          <p>
+            <b>Re-classify Transfers & Fix Double-Counting</b>
+            <span>Re-evaluate existing records to ensure inter-account movements, card repayments, and personal credits are excluded from income/expense totals.</span>
+          </p>
+          <button
+            className="outline-button"
+            onClick={async () => {
+              const healed = await reclassifyTransfers()
+              notify(
+                healed > 0
+                  ? `Successfully reclassified ${healed} transactions as transfers. Double-counting eliminated!`
+                  : 'All transactions are already accurately classified.'
+              )
+            }}
+          >
+            Re-classify Transfers
           </button>
         </div>
 
@@ -2687,10 +3507,37 @@ function App() {
     Settings: SettingsPage,
   }
 
+  const tabIndexMap: Partial<Record<Section, number>> = {
+    Dashboard: 0,
+    Transactions: 1,
+    'Budgets & Savings': 2,
+    Planner: 3,
+    'AI Assistant': 4,
+  }
+  const currentTabIndex = tabIndexMap[section] ?? 0
+
   const View = views[section]
 
   return (
-    <div className={`app ${dark ? 'dark' : 'light'}`}>
+    <div className={`app ${dark ? 'dark' : 'light'} liquid-page-root`}>
+      {/* Ambient Floating Glow Orbs */}
+      <div className="liquid-ambient-container" aria-hidden="true">
+        <div className="liquid-orb liquid-orb-1" />
+        <div className="liquid-orb liquid-orb-2" />
+        <div className="liquid-orb liquid-orb-3" />
+        <div className="liquid-orb liquid-orb-4" />
+      </div>
+
+      {/* SVG Goo Filter for Bottom Nav Indicator */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <filter id="goo" x="-10%" y="-40%" width="120%" height="180%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b" />
+            <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" />
+          </filter>
+        </defs>
+      </svg>
+
       {/* Sidebar Dock */}
       <aside className={`sidebar ${sidebar ? 'open' : ''}`}>
         <div className="brand">
@@ -2807,9 +3654,227 @@ function App() {
         </header>
 
         <div className="content">
-          <View />
+          {section === 'Dashboard' ? (
+            <View />
+          ) : (
+            <div className="liquid-view-container">
+              <div className="liquid-subpage-header">
+                <button
+                  className="liquid-action-button"
+                  style={{
+                    width: 'auto',
+                    padding: '8px 16px',
+                    flexDirection: 'row',
+                    gap: '8px',
+                    minHeight: 'unset',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => go('Dashboard')}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to Dashboard</span>
+                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    className={`liquid-mode-pill ${isDemoMode ? 'demo' : 'real'}`}
+                    onClick={() => toggleDemoMode()}
+                    title="Toggle Live / Demo"
+                  >
+                    <i
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: isDemoMode ? '#a3401a' : '#0b6b4a',
+                      }}
+                    />
+                    {isDemoMode ? 'Demo' : 'Live'}
+                  </button>
+                  <button
+                    className="liquid-ai-round-btn"
+                    onClick={() => setIsDrawerOpen(true)}
+                    title="All Modules"
+                  >
+                    <Menu size={18} />
+                  </button>
+                </div>
+              </div>
+              <View />
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Liquid Glass Floating Bottom Navigation Bar */}
+      <nav aria-label="Main" className="liquid-bottom-nav">
+        <div className="liquid-goo-layer">
+          <div
+            className="liquid-goo-indicator blob-a"
+            style={{ left: `calc(${currentTabIndex} * 20% + (20% - 64px) / 2)` }}
+          />
+          <div
+            className="liquid-goo-indicator blob-b"
+            style={{ left: `calc(${currentTabIndex} * 20% + (20% - 64px) / 2)` }}
+          />
+        </div>
+        <div className="liquid-nav-grid">
+          <button
+            className={`liquid-nav-btn ${currentTabIndex === 0 ? 'active' : ''}`}
+            onClick={() => go('Dashboard')}
+            aria-label="Home"
+          >
+            <House size={22} strokeWidth={1.9} />
+            <span>Home</span>
+          </button>
+          <button
+            className={`liquid-nav-btn ${currentTabIndex === 1 ? 'active' : ''}`}
+            onClick={() => go('Transactions')}
+            aria-label="Activity"
+          >
+            <ReceiptText size={22} strokeWidth={1.9} />
+            <span>Activity</span>
+          </button>
+          <button
+            className={`liquid-nav-btn ${currentTabIndex === 2 ? 'active' : ''}`}
+            onClick={() => go('Budgets & Savings')}
+            aria-label="Budgets"
+          >
+            <Target size={22} strokeWidth={1.9} />
+            <span>Budgets</span>
+          </button>
+          <button
+            className={`liquid-nav-btn ${currentTabIndex === 3 ? 'active' : ''}`}
+            onClick={() => go('Planner')}
+            aria-label="Plan"
+          >
+            <CalendarDays size={22} strokeWidth={1.9} />
+            <span>Plan</span>
+          </button>
+          <button
+            className={`liquid-nav-btn ${currentTabIndex === 4 ? 'active' : ''}`}
+            onClick={() => go('AI Assistant')}
+            aria-label="AI"
+          >
+            <Sparkles size={22} strokeWidth={1.9} />
+            <span>AI</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Quick Modules Liquid Drawer */}
+      {isDrawerOpen && (
+        <div
+          className="liquid-drawer-backdrop"
+          onClick={() => setIsDrawerOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="liquid-drawer-sheet" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={18} color="#6d3fe0" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f1a3d' }}>
+                  All Modules
+                </h3>
+              </div>
+              <button
+                className="liquid-ai-round-btn"
+                style={{ width: '32px', height: '32px' }}
+                onClick={() => setIsDrawerOpen(false)}
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="liquid-drawer-grid">
+              <button
+                className={`liquid-drawer-item ${section === 'Dashboard' ? 'active' : ''}`}
+                onClick={() => { go('Dashboard'); setIsDrawerOpen(false) }}
+              >
+                <House size={20} />
+                <span>Dashboard</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Transactions' ? 'active' : ''}`}
+                onClick={() => { go('Transactions'); setIsDrawerOpen(false) }}
+              >
+                <ReceiptText size={20} />
+                <span>Transactions</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Budgets & Savings' ? 'active' : ''}`}
+                onClick={() => { go('Budgets & Savings'); setIsDrawerOpen(false) }}
+              >
+                <Target size={20} />
+                <span>Budgets</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Financial Insights' ? 'active' : ''}`}
+                onClick={() => { go('Financial Insights'); setIsDrawerOpen(false) }}
+              >
+                <TrendingUp size={20} />
+                <span>Insights</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'My Inventory' ? 'active' : ''}`}
+                onClick={() => { go('My Inventory'); setIsDrawerOpen(false) }}
+              >
+                <Package size={20} />
+                <span>Inventory</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Smart Shopping' ? 'active' : ''}`}
+                onClick={() => { go('Smart Shopping'); setIsDrawerOpen(false) }}
+              >
+                <ShoppingBag size={20} />
+                <span>Shopping</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Planner' ? 'active' : ''}`}
+                onClick={() => { go('Planner'); setIsDrawerOpen(false) }}
+              >
+                <CalendarDays size={20} />
+                <span>Planner</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'AI Assistant' ? 'active' : ''}`}
+                onClick={() => { go('AI Assistant'); setIsDrawerOpen(false) }}
+              >
+                <Bot size={20} />
+                <span>Money Mate AI</span>
+              </button>
+              <button
+                className={`liquid-drawer-item ${section === 'Settings' ? 'active' : ''}`}
+                onClick={() => { go('Settings'); setIsDrawerOpen(false) }}
+              >
+                <Settings size={20} />
+                <span>Settings</span>
+              </button>
+              <button
+                className="liquid-drawer-item"
+                onClick={() => { setIsCategoryModalOpen(true); setIsDrawerOpen(false) }}
+              >
+                <Tag size={20} />
+                <span>Categories</span>
+              </button>
+              <button
+                className="liquid-drawer-item"
+                onClick={() => { setIsBackupModalOpen(true); setIsDrawerOpen(false) }}
+              >
+                <Database size={20} />
+                <span>Backup</span>
+              </button>
+              <button
+                className="liquid-drawer-item"
+                onClick={() => { setIsReconciliationModalOpen(true); setIsDrawerOpen(false) }}
+              >
+                <Upload size={20} />
+                <span>Import</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Transaction Modal */}
       <TransactionModal
@@ -3000,6 +4065,31 @@ function App() {
         onCommitSuccess={refreshTransactions}
       />
 
+      {/* Dynamic Budget & Savings Goal Modal */}
+      <BudgetGoalModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => {
+          setIsBudgetModalOpen(false)
+          setEditingBudgetCategory(null)
+        }}
+        totalBudgetRupees={userBudgetPaise ? Math.round(userBudgetPaise / 100) : 45000}
+        emergencyGoalRupees={emergencyGoalRupees}
+        categoryBudgets={categoryBudgets}
+        categories={categoryHook.categories}
+        initialCategory={editingBudgetCategory}
+        onSave={(data) => {
+          setUserBudgetLimitRupees(data.totalBudget.toString())
+          setEmergencyGoalRupees(data.emergencyGoal)
+          setCategoryBudgets(data.categoryBudgets)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('moneymate_user_budget_rupees', data.totalBudget.toString())
+            localStorage.setItem('moneymate_emergency_goal_rupees', data.emergencyGoal.toString())
+            localStorage.setItem('moneymate_category_budgets', JSON.stringify(data.categoryBudgets))
+          }
+          notify('Budgets & savings goals updated successfully!')
+        }}
+      />
+
       {/* Toast Notification */}
       {toast && (
         <div className="toast">
@@ -3112,4 +4202,169 @@ function Stat({
   )
 }
 
+function BudgetGoalModal({
+  isOpen,
+  onClose,
+  totalBudgetRupees,
+  emergencyGoalRupees,
+  categoryBudgets,
+  categories,
+  onSave,
+  initialCategory,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  totalBudgetRupees: number
+  emergencyGoalRupees: number
+  categoryBudgets: Record<string, number>
+  categories: Category[]
+  onSave: (data: {
+    totalBudget: number
+    emergencyGoal: number
+    categoryBudgets: Record<string, number>
+  }) => void
+  initialCategory?: string | null
+}) {
+  const [totalBudget, setTotalBudget] = useState(totalBudgetRupees.toString())
+  const [emergencyGoal, setEmergencyGoal] = useState(emergencyGoalRupees.toString())
+  const [catLimits, setCatLimits] = useState<Record<string, string>>(() => {
+    const res: Record<string, string> = {}
+    categories.forEach((c) => {
+      res[c.name] = (categoryBudgets[c.name] ?? Math.round(totalBudgetRupees * 0.15)).toString()
+    })
+    return res
+  })
+
+  useEffect(() => {
+    if (isOpen) {
+      setTotalBudget(totalBudgetRupees.toString())
+      setEmergencyGoal(emergencyGoalRupees.toString())
+      const res: Record<string, string> = {}
+      categories.forEach((c) => {
+        res[c.name] = (categoryBudgets[c.name] ?? Math.round(totalBudgetRupees * 0.15)).toString()
+      })
+      setCatLimits(res)
+    }
+  }, [isOpen, totalBudgetRupees, emergencyGoalRupees, categoryBudgets, categories])
+
+  if (!isOpen) return null
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsedTotal = parseInt(totalBudget, 10) || totalBudgetRupees
+    const parsedGoal = parseInt(emergencyGoal, 10) || emergencyGoalRupees
+    const parsedCats: Record<string, number> = {}
+    Object.entries(catLimits).forEach(([k, v]) => {
+      const num = parseInt(v, 10)
+      if (!isNaN(num) && num > 0) parsedCats[k] = num
+    })
+    onSave({
+      totalBudget: parsedTotal,
+      emergencyGoal: parsedGoal,
+      categoryBudgets: parsedCats,
+    })
+    onClose()
+  }
+
+  return (
+    <div className="backdrop" role="dialog" aria-modal="true">
+      <div className="modal" style={{ width: 'min(100%, 460px)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <header>
+          <div>
+            <span>CONFIGURABLE LIMITS</span>
+            <h2>Adjust Budgets &amp; Goals</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close modal">
+            <X size={20} />
+          </button>
+        </header>
+
+        <form onSubmit={handleSave} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#aeb6ca', marginBottom: '6px' }}>
+              Overall Monthly Spend Limit (₹)
+            </label>
+            <input
+              type="number"
+              min="1000"
+              step="500"
+              value={totalBudget}
+              onChange={(e) => setTotalBudget(e.target.value)}
+              placeholder="e.g. 45000"
+              required
+            />
+            <small style={{ fontSize: '10px', color: '#8d96ac', marginTop: '4px', display: 'block' }}>
+              Used across dashboards and planner headroom projections.
+            </small>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#aeb6ca', marginBottom: '6px' }}>
+              Primary Goal: Emergency Fund Target (₹)
+            </label>
+            <input
+              type="number"
+              min="5000"
+              step="1000"
+              value={emergencyGoal}
+              onChange={(e) => setEmergencyGoal(e.target.value)}
+              placeholder="e.g. 60000"
+              required
+            />
+            <small style={{ fontSize: '10px', color: '#8d96ac', marginTop: '4px', display: 'block' }}>
+              Compared against your net confirmed ledger savings.
+            </small>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#aeb6ca', marginBottom: '8px' }}>
+              Category Allocations (₹)
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+              {categories.filter((c) => c.type === 'expense').map((cat) => (
+                <div
+                  key={cat.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    background: initialCategory === cat.name ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#eff1fa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.color }} />
+                    {cat.name}
+                  </span>
+                  <input
+                    type="number"
+                    min="100"
+                    step="100"
+                    style={{ width: '110px', height: '30px', textAlign: 'right', fontSize: '12px' }}
+                    value={catLimits[cat.name] ?? ''}
+                    onChange={(e) => setCatLimits((prev) => ({ ...prev, [cat.name]: e.target.value }))}
+                    placeholder="Limit"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <footer style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+            <button type="button" className="outline-button" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="primary-button">
+              Save All Limits
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default App
+

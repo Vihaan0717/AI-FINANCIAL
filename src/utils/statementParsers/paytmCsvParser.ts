@@ -204,10 +204,18 @@ export function parsePaytmCsv(
       errors: [],
       proposedType: rawActivity.includes('refund')
         ? 'refund'
+        : (/transfer|trf|to own|self|credit card|slice/i.test(rawDesc + ' ' + rawActivity) || (direction === 'credit' && !/salary|payroll|dividend|interest/i.test(rawDesc)))
+        ? 'transfer'
         : direction === 'credit'
         ? 'income'
         : 'expense',
-      proposedCategory: direction === 'credit' ? 'Income' : 'Other',
+      proposedCategory: rawActivity.includes('refund')
+        ? 'Shopping'
+        : (/transfer|trf|to own|self|credit card|slice/i.test(rawDesc + ' ' + rawActivity) || (direction === 'credit' && !/salary|payroll|dividend|interest/i.test(rawDesc)))
+        ? 'Transfer'
+        : direction === 'credit'
+        ? 'Income'
+        : 'Other',
       status: isFailed ? 'failed' : 'staged',
       reviewStatus: 'pending',
       matchCandidateIds: [],

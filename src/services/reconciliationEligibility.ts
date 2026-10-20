@@ -148,7 +148,7 @@ export function validateImportEligibility(
   }
 
   // 10. Transfer consistency
-  if (decision.isInternalTransfer || decision.proposedType === 'transfer') {
+  if (decision.isInternalTransfer) {
     if (!decision.transferDestinationAccountId || !decision.transferDestinationAccountAlias) {
       return {
         isEligible: false,

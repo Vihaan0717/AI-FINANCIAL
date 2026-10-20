@@ -207,6 +207,30 @@ export function parseSbiCsv(
       totalCreditPaise += amountPaise
     }
 
+    // Classify transfers, repayments, and income
+    const isTransferNarration = /transfer to|trf to|to own|self trf|self transfer|slice|card pay|credit card/i.test(
+      rawNarration + ' ' + (cleanDescription || '')
+    )
+    const isExplicitIncome = /salary|payroll|dividend|interest|pension|stipend/i.test(
+      rawNarration + ' ' + (cleanDescription || '')
+    )
+
+    let proposedType: 'income' | 'expense' | 'transfer' = direction === 'credit' ? 'income' : 'expense'
+    let proposedCategory = direction === 'credit' ? 'Income' : 'Other'
+
+    if (isTransferNarration) {
+      proposedType = 'transfer'
+      proposedCategory = 'Transfer'
+    } else if (direction === 'credit') {
+      if (isExplicitIncome) {
+        proposedType = 'income'
+        proposedCategory = 'Income'
+      } else if (/transfer|trf|upi|imps|neft/i.test(rawNarration)) {
+        proposedType = 'transfer'
+        proposedCategory = 'Transfer'
+      }
+    }
+
     const record: StatementRecord = {
       id: `stg-sbi-${rowNum}-${Date.now()}`,
       batchId,
@@ -243,8 +267,8 @@ export function parseSbiCsv(
       },
       warnings: rowWarnings,
       errors: [],
-      proposedType: direction === 'credit' ? 'income' : 'expense',
-      proposedCategory: direction === 'credit' ? 'Income' : 'Other',
+      proposedType,
+      proposedCategory,
       status: 'staged',
       reviewStatus: 'pending',
       matchCandidateIds: [],

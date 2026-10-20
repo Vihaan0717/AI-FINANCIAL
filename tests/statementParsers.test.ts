@@ -283,20 +283,20 @@ describe('Money Mate AI — Stage 8.2 Client-Side Statement Parsers Test Suite',
       expect(result.records.length).toBe(5)
       expect(result.rejectedRows.length).toBe(0)
 
-      // Row 1: Slice bank debit
+      // Row 1: Slice bank debit (Internal account/debt transfer)
       const rec1 = result.records[0]
       expect(rec1.amountPaise).toBe(700000) // ₹7,000.00
       expect(rec1.direction).toBe('debit')
-      expect(rec1.proposedType).toBe('expense')
+      expect(rec1.proposedType).toBe('transfer')
       expect(rec1.normalizedReference).toBe('653418482649') // Extracted UTR
       expect(rec1.counterparty).toContain('slice small finance bank')
       expect(rec1.parsedDate).toBe('2026-10-18T15:17:00.000Z')
 
-      // Row 2: Credit from Annaya Hema Sai
+      // Row 2: Credit from Annaya Hema Sai (Personal/P2P transfer - not salary)
       const rec2 = result.records[1]
       expect(rec2.amountPaise).toBe(700000)
       expect(rec2.direction).toBe('credit')
-      expect(rec2.proposedType).toBe('income')
+      expect(rec2.proposedType).toBe('transfer')
       expect(rec2.normalizedReference).toBe('929806481745')
 
       // Row 3: Refund with fractional paise and Sept month

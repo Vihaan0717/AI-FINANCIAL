@@ -339,6 +339,9 @@ export async function commitStatementBatch(
       if (decision.proposedType === 'refund') {
         txType = 'refund'
         refundsCount++
+      } else if (decision.proposedType === 'transfer' || record.proposedType === 'transfer') {
+        txType = 'transfer'
+        transfersCount++
       } else if (decision.proposedType === 'income' || record.proposedType === 'income') {
         txType = 'income'
       } else {

@@ -191,7 +191,7 @@ export function evaluateStatementRecordMatch(
 export function evaluateTransferCandidate(
   debitRecord: StatementRecord,
   creditRecord: StatementRecord,
-  ownedAccounts: Map<string, AccountDefinition>
+  ownedAccounts?: Map<string, AccountDefinition>
 ): InternalTransferCandidate | null {
   // 1. Must be debit on one side and credit on the other
   if (debitRecord.direction !== 'debit' || creditRecord.direction !== 'credit') {
@@ -208,12 +208,16 @@ export function evaluateTransferCandidate(
     return null
   }
 
-  // 4. Both accounts must be registered owned accounts
-  const fromAcc = ownedAccounts.get(debitRecord.sourceAccountId)
-  const toAcc = ownedAccounts.get(creditRecord.sourceAccountId)
-  if (!fromAcc?.isOwned || !toAcc?.isOwned) {
-    return null
-  }
+  // 4. Resolve account identities
+  const fromAcc = ownedAccounts?.get(debitRecord.sourceAccountId)
+  const toAcc = ownedAccounts?.get(creditRecord.sourceAccountId)
+  if (fromAcc && !fromAcc.isOwned) return null
+  if (toAcc && !toAcc.isOwned) return null
+
+  const fromAccountId = fromAcc?.id || debitRecord.sourceAccountId
+  const fromAccountAlias = fromAcc?.alias || debitRecord.sourceAccountAlias || 'Account A'
+  const toAccountId = toAcc?.id || creditRecord.sourceAccountId
+  const toAccountAlias = toAcc?.alias || creditRecord.sourceAccountAlias || 'Account B'
 
   // 5. Proximity check (clearing window)
   if (!debitRecord.parsedDate || !creditRecord.parsedDate) {
@@ -243,7 +247,7 @@ export function evaluateTransferCandidate(
   ]
 
   let confidence: 'high' | 'medium' = 'medium'
-  let matchReason = `Compatible debit and credit of ₹${(debitRecord.amountPaise / 100).toFixed(2)} between owned accounts ${fromAcc.alias} and ${toAcc.alias}.`
+  let matchReason = `Compatible debit and credit of ₹${(debitRecord.amountPaise / 100).toFixed(2)} between accounts ${fromAccountAlias} and ${toAccountAlias}. Excluded from Income and Expenses to eliminate double counting.`
 
   if (
     debitRecord.normalizedReference &&
@@ -259,10 +263,10 @@ export function evaluateTransferCandidate(
     id: `trf-cand-${debitRecord.id}-${creditRecord.id}`,
     debitRecordId: debitRecord.id,
     creditRecordId: creditRecord.id,
-    fromAccountId: fromAcc.id,
-    fromAccountAlias: fromAcc.alias,
-    toAccountId: toAcc.id,
-    toAccountAlias: toAcc.alias,
+    fromAccountId,
+    fromAccountAlias,
+    toAccountId,
+    toAccountAlias,
     amountPaise: debitRecord.amountPaise,
     date: debitRecord.parsedDate,
     reference: debitRecord.normalizedReference || creditRecord.normalizedReference,
@@ -422,6 +426,19 @@ export function evaluateRecordAgainstLedger(
       }
 
       // 1b. Direction conflict check
+      if (matchingTx.type === 'transfer') {
+        return {
+          ...baseDecision,
+          state: 'suggested_match',
+          matchedLedgerTxId: matchingTx.id,
+          proposedType: 'transfer',
+          proposedCategory: 'Transfer',
+          isInternalTransfer: true,
+          evidence: ['exact_reference', 'compatible_amount_direction'],
+          decisionReason: `High-confidence match: Reference (${record.normalizedReference}) corresponds to existing ledger transfer "${matchingTx.description}". Confirming links this leg without double counting.`,
+        }
+      }
+
       const isRecordDebit = record.direction === 'debit'
       const isTxExpense = matchingTx.type === 'expense'
       const isRecordCredit = record.direction === 'credit'
@@ -490,7 +507,8 @@ export function evaluateRecordAgainstLedger(
       const isTxExpense = t.type === 'expense'
       const isRecordCredit = record.direction === 'credit'
       const isTxIncomeOrRefund = t.type === 'income' || t.type === 'refund'
-      if ((isRecordDebit && !isTxExpense) || (isRecordCredit && !isTxIncomeOrRefund)) {
+      const isTxTransfer = t.type === 'transfer'
+      if (!isTxTransfer && ((isRecordDebit && !isTxExpense) || (isRecordCredit && !isTxIncomeOrRefund))) {
         return false
       }
 
@@ -501,12 +519,18 @@ export function evaluateRecordAgainstLedger(
     })
 
     if (probableTx) {
+      const isTransfer = probableTx.type === 'transfer'
       return {
         ...baseDecision,
         state: 'suggested_match',
         matchedLedgerTxId: probableTx.id,
+        proposedType: isTransfer ? 'transfer' : baseDecision.proposedType,
+        proposedCategory: isTransfer ? 'Transfer' : baseDecision.proposedCategory,
+        isInternalTransfer: isTransfer,
         evidence: ['compatible_amount_direction', 'timestamp_proximity', 'counterparty_similarity', 'weak_heuristic'],
-        decisionReason: `Possible match candidate: Matching amount ₹${(record.amountPaise / 100).toFixed(2)} and similar merchant within settlement window of ledger transaction "${probableTx.description}". Requires user confirmation.`,
+        decisionReason: isTransfer
+          ? `Possible transfer leg: Matching amount ₹${(record.amountPaise / 100).toFixed(2)} within clearing window of existing transfer "${probableTx.description}". Linking prevents double counting.`
+          : `Possible match candidate: Matching amount ₹${(record.amountPaise / 100).toFixed(2)} and similar merchant within settlement window of ledger transaction "${probableTx.description}". Requires user confirmation.`,
       }
     }
   }
@@ -550,63 +574,61 @@ export function createInitialReconciliationDecisions(
   const decisions = new Map<string, ReconciliationDecision>()
   const transferPairedIds = new Set<string>()
 
-  // 1. Detect candidate internal transfers within the imported batch
-  if (ownedAccounts && ownedAccounts.size > 1) {
-    for (let i = 0; i < records.length; i++) {
-      const recA = records[i]
-      if (transferPairedIds.has(recA.id)) continue
+  // 1. Detect candidate internal transfers within the imported batch across accounts
+  for (let i = 0; i < records.length; i++) {
+    const recA = records[i]
+    if (transferPairedIds.has(recA.id)) continue
 
-      for (let j = i + 1; j < records.length; j++) {
-        const recB = records[j]
-        if (transferPairedIds.has(recB.id)) continue
+    for (let j = i + 1; j < records.length; j++) {
+      const recB = records[j]
+      if (transferPairedIds.has(recB.id)) continue
 
-        const transfer =
-          recA.direction === 'debit'
-            ? evaluateTransferCandidate(recA, recB, ownedAccounts)
-            : evaluateTransferCandidate(recB, recA, ownedAccounts)
+      const transfer =
+        recA.direction === 'debit'
+          ? evaluateTransferCandidate(recA, recB, ownedAccounts)
+          : evaluateTransferCandidate(recB, recA, ownedAccounts)
 
-        if (transfer) {
-          const debitRec = recA.direction === 'debit' ? recA : recB
-          const creditRec = recA.direction === 'credit' ? recA : recB
+      if (transfer) {
+        const debitRec = recA.direction === 'debit' ? recA : recB
+        const creditRec = recA.direction === 'credit' ? recA : recB
 
-          transferPairedIds.add(debitRec.id)
-          transferPairedIds.add(creditRec.id)
+        transferPairedIds.add(debitRec.id)
+        transferPairedIds.add(creditRec.id)
 
-          const now = new Date().toISOString()
-          decisions.set(debitRec.id, {
-            recordId: debitRec.id,
-            state: 'suggested_match',
-            matchedRecordId: creditRec.id,
-            proposedType: 'transfer',
-            proposedCategory: 'Transfer',
-            isInternalTransfer: true,
-            transferDestinationAccountId: creditRec.sourceAccountId,
-            transferDestinationAccountAlias: creditRec.sourceAccountAlias,
-            evidence: transfer.matchEvidence,
-            conflicts: [],
-            decisionReason: transfer.matchReason,
-            isConfirmed: false,
-            updatedAt: now,
-          })
+        const now = new Date().toISOString()
+        decisions.set(debitRec.id, {
+          recordId: debitRec.id,
+          state: 'suggested_match',
+          matchedRecordId: creditRec.id,
+          proposedType: 'transfer',
+          proposedCategory: 'Transfer',
+          isInternalTransfer: true,
+          transferDestinationAccountId: creditRec.sourceAccountId,
+          transferDestinationAccountAlias: creditRec.sourceAccountAlias,
+          evidence: transfer.matchEvidence,
+          conflicts: [],
+          decisionReason: transfer.matchReason,
+          isConfirmed: false,
+          updatedAt: now,
+        })
 
-          decisions.set(creditRec.id, {
-            recordId: creditRec.id,
-            state: 'suggested_match',
-            matchedRecordId: debitRec.id,
-            proposedType: 'transfer',
-            proposedCategory: 'Transfer',
-            isInternalTransfer: true,
-            transferDestinationAccountId: debitRec.sourceAccountId,
-            transferDestinationAccountAlias: debitRec.sourceAccountAlias,
-            evidence: transfer.matchEvidence,
-            conflicts: [],
-            decisionReason: transfer.matchReason,
-            isConfirmed: false,
-            updatedAt: now,
-          })
+        decisions.set(creditRec.id, {
+          recordId: creditRec.id,
+          state: 'suggested_match',
+          matchedRecordId: debitRec.id,
+          proposedType: 'transfer',
+          proposedCategory: 'Transfer',
+          isInternalTransfer: true,
+          transferDestinationAccountId: debitRec.sourceAccountId,
+          transferDestinationAccountAlias: debitRec.sourceAccountAlias,
+          evidence: transfer.matchEvidence,
+          conflicts: [],
+          decisionReason: transfer.matchReason,
+          isConfirmed: false,
+          updatedAt: now,
+        })
 
-          break
-        }
+        break
       }
     }
   }

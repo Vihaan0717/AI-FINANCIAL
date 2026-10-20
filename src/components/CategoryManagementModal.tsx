@@ -224,9 +224,10 @@ export function CategoryManagementModal({
   }
 
   return (
-    <div className="backdrop" role="dialog" aria-modal="true">
+    <div className="liquid-modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
       <div
-        className="modal"
+        className="liquid-modal-sheet"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: 'min(100%, 640px)',
           maxHeight: '90vh',
@@ -242,58 +243,59 @@ export function CategoryManagementModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingBottom: '14px',
-            borderBottom: '1px solid var(--border)',
+            borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(59, 130, 246, 0.15)',
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.18))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--blue)',
+                color: '#6d28d9',
+                boxShadow: '0 2px 8px rgba(109, 40, 217, 0.12)',
               }}
             >
               <Tag size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: '17px', margin: 0, fontWeight: 700 }}>Financial Categories</h2>
-              <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+              <h2 style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: '#1e1b4b' }}>Financial Categories</h2>
+              <span style={{ fontSize: '11px', color: '#6d6796' }}>
                 Personalize categories, icons, colors, and needs/wants classification · Scope: {currentScope}
               </span>
             </div>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button className="icon-button" onClick={onClose} aria-label="Close dialog" style={{ color: '#6d6796' }}>
             <X size={18} />
           </button>
         </header>
 
         {/* Action Bar: Search, Tabs, New Button */}
-        <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Search
-                size={14}
+                size={15}
                 style={{
                   position: 'absolute',
-                  left: '10px',
+                  left: '12px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: 'var(--muted)',
+                  color: '#8b5cf6',
                 }}
               />
               <input
                 type="text"
-                className="text-input"
+                className="liquid-input"
                 id="search-category-input"
                 placeholder="Search categories..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ paddingLeft: '32px', height: '36px', fontSize: '13px' }}
+                style={{ paddingLeft: '34px', height: '38px', fontSize: '13px' }}
               />
             </div>
             <button
@@ -304,10 +306,15 @@ export function CategoryManagementModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                height: '36px',
-                padding: '0 14px',
+                height: '38px',
+                padding: '0 16px',
                 fontSize: '13px',
+                fontWeight: 700,
                 whiteSpace: 'nowrap',
+                background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+                color: '#ffffff',
+                borderRadius: '12px',
+                boxShadow: '0 4px 14px rgba(124, 58, 237, 0.28)',
               }}
             >
               <Plus size={15} />
@@ -316,30 +323,30 @@ export function CategoryManagementModal({
           </div>
 
           {/* Filter Pills */}
-          <div className="planner-tabs" style={{ margin: 0 }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
-              className={`planner-tab ${tab === 'all' ? 'active' : ''}`}
+              className={`liquid-pill-tab ${tab === 'all' ? 'active' : ''}`}
               id="tab-all-categories"
               onClick={() => setTab('all')}
             >
               Active ({categories.filter((c) => !c.isArchived).length})
             </button>
             <button
-              className={`planner-tab ${tab === 'expense' ? 'active' : ''}`}
+              className={`liquid-pill-tab ${tab === 'expense' ? 'active' : ''}`}
               id="tab-expense-categories"
               onClick={() => setTab('expense')}
             >
               Expenses ({categories.filter((c) => c.type === 'expense' && !c.isArchived).length})
             </button>
             <button
-              className={`planner-tab ${tab === 'income' ? 'active' : ''}`}
+              className={`liquid-pill-tab ${tab === 'income' ? 'active' : ''}`}
               id="tab-income-categories"
               onClick={() => setTab('income')}
             >
               Income ({categories.filter((c) => c.type === 'income' && !c.isArchived).length})
             </button>
             <button
-              className={`planner-tab ${tab === 'archived' ? 'active' : ''}`}
+              className={`liquid-pill-tab ${tab === 'archived' ? 'active' : ''}`}
               id="tab-archived-categories"
               onClick={() => setTab('archived')}
             >
@@ -378,32 +385,26 @@ export function CategoryManagementModal({
                 return (
                   <div
                     key={cat.id}
-                    className="category-item-row"
+                    className="liquid-category-row category-item-row"
                     id={`cat-row-${cat.id}`}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid var(--border)',
                       opacity: cat.isArchived ? 0.6 : 1,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div
                         style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: `${cat.color}20`,
-                          border: `1px solid ${cat.color}40`,
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '12px',
+                          background: `${cat.color}22`,
+                          border: `1px solid ${cat.color}45`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           color: cat.color,
                           flexShrink: 0,
+                          boxShadow: `0 2px 8px ${cat.color}25`,
                         }}
                       >
                         <IconComponent size={18} />
@@ -412,9 +413,9 @@ export function CategoryManagementModal({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span
                             style={{
-                              fontWeight: 600,
+                              fontWeight: 700,
                               fontSize: '14px',
-                              color: 'var(--text)',
+                              color: '#1e1b4b',
                               textDecoration: cat.isArchived ? 'line-through' : 'none',
                             }}
                           >
@@ -424,11 +425,12 @@ export function CategoryManagementModal({
                             className={`badge ${cat.type === 'expense' ? 'badge-expense' : 'badge-income'}`}
                             style={{
                               fontSize: '10px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
                               textTransform: 'capitalize',
-                              background: cat.type === 'expense' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                              color: cat.type === 'expense' ? '#ef4444' : '#10b981',
+                              background: cat.type === 'expense' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                              color: cat.type === 'expense' ? '#dc2626' : '#059669',
                             }}
                           >
                             {cat.type}
@@ -436,10 +438,11 @@ export function CategoryManagementModal({
                           <span
                             style={{
                               fontSize: '10px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(255, 255, 255, 0.06)',
-                              color: 'var(--muted)',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              background: 'rgba(109, 40, 217, 0.08)',
+                              color: '#6d28d9',
                               textTransform: 'capitalize',
                             }}
                           >
@@ -556,9 +559,10 @@ export function CategoryManagementModal({
 
       {/* CREATE / EDIT CATEGORY SUB-MODAL */}
       {isFormOpen && (
-        <div className="backdrop" style={{ zIndex: 1100 }}>
+        <div className="liquid-modal-backdrop" style={{ zIndex: 1100 }} onClick={() => setIsFormOpen(false)}>
           <div
-            className="modal"
+            className="liquid-modal-sheet"
+            onClick={(e) => e.stopPropagation()}
             style={{ width: 'min(100%, 480px)', maxHeight: '90vh', overflowY: 'auto' }}
             id="category-form-modal"
           >
@@ -825,13 +829,13 @@ export function CategoryManagementModal({
 
       {/* DELETE CONFIRMATION DIALOG */}
       {categoryToDelete && (
-        <div className="backdrop" style={{ zIndex: 1200 }}>
-          <div className="modal" style={{ width: 'min(100%, 420px)' }}>
+        <div className="liquid-modal-backdrop" style={{ zIndex: 1200 }} onClick={() => setCategoryToDelete(null)}>
+          <div className="liquid-modal-sheet" onClick={(e) => e.stopPropagation()} style={{ width: 'min(100%, 420px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444', marginBottom: '12px' }}>
               <AlertCircle size={22} />
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Delete Category?</h3>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--text)', margin: '0 0 10px' }}>
+            <p style={{ fontSize: '13px', color: '#1e1b4b', margin: '0 0 10px' }}>
               Are you sure you want to permanently delete <strong>"{categoryToDelete.name}"</strong>?
             </p>
             <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '0 0 14px' }}>

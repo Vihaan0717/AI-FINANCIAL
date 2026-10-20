@@ -226,17 +226,27 @@ export function parsePhonePeCsv(
 
     let proposedType: 'income' | 'expense' | 'transfer' | 'refund' =
       direction === 'credit' ? 'income' : 'expense'
+    let proposedCategory = direction === 'credit' ? 'Income' : 'Other'
+
+    const rawDetails = detailsIdx !== -1 ? rawRow[detailsIdx] || '' : ''
+    const isExplicitIncome = /salary|payroll|dividend|interest|pension|stipend|client invoice/i.test(
+      cleanMerchant + ' ' + rawDetails
+    )
+
     if (isRefund) {
       proposedType = 'refund'
-    } else if (isTransfer) {
-      proposedType = 'transfer'
-    }
-
-    let proposedCategory = direction === 'credit' ? 'Income' : 'Other'
-    if (isRefund) {
       proposedCategory = 'Shopping'
-    } else if (isTransfer) {
+    } else if (isTransfer || /transfer to|transfer from|to own|self transfer|slice/i.test(cleanMerchant + ' ' + rawDetails)) {
+      proposedType = 'transfer'
       proposedCategory = 'Transfer'
+    } else if (direction === 'credit') {
+      if (isExplicitIncome) {
+        proposedType = 'income'
+        proposedCategory = 'Income'
+      } else {
+        proposedType = 'transfer'
+        proposedCategory = 'Transfer'
+      }
     }
 
     let resolvedAccountId = sourceAccountId

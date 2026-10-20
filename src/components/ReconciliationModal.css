@@ -1,720 +1,1339 @@
-/* ReconciliationModal.css — Money Mate AI Read-Only Statement Preview */
+/* ============================================================
+   ReconciliationModal.css — Money Mate Liquid Glass Design System
+   Exact 1:1 Alignment with Money Mate · Liquid Glass Transactions.html
+   ============================================================ */
 
+:root {
+  --bg: #ece6ff;
+  --tx: #1f1a3d;
+  --mu: #5b5780;
+  --pu: #6d3fe0;
+  --pu2: #8b5cf6;
+  --mint: #0b6b4a;
+  --mintb: #c9f7e3;
+  --cor: #a3401a;
+  --corb: #ffe0d0;
+  --amb: #8a5a00;
+  --ambb: #ffefc2;
+
+  --g: rgba(255, 255, 255, 0.52);
+  --g2: rgba(255, 255, 255, 0.72);
+  --gb: rgba(255, 255, 255, 0.85);
+  --gs: 0 12px 36px rgba(110, 80, 200, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+  --in: rgba(255, 255, 255, 0.6);
+  --ln: rgba(80, 60, 150, 0.12);
+  --o1: #c4a8ff;
+  --o2: #7fd6ff;
+  --o3: #ffb3cf;
+  --o4: #a9f0d4;
+  --sc: rgba(60, 40, 120, 0.18);
+
+  /* Theme Token Fallback Aliases */
+  --panel: var(--g);
+  --border: var(--ln);
+  --text: var(--tx);
+  --muted: var(--mu);
+  --accent: var(--pu);
+  --panel-bg: var(--panel, var(--g));
+  --border-color: var(--border, var(--ln));
+  --text-color: var(--text, var(--tx));
+  --muted-color: var(--muted, var(--mu));
+  --accent-color: var(--accent, var(--pu));
+  --bg-color: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0a22;
+    --tx: #f2f0ff;
+    --mu: #a9a4d0;
+    --pu: #a98bff;
+    --pu2: #8b5cf6;
+    --mint: #6ee7b7;
+    --mintb: rgba(52, 211, 153, 0.16);
+    --cor: #ffab8a;
+    --corb: rgba(255, 140, 100, 0.16);
+    --amb: #fbbf24;
+    --ambb: rgba(251, 191, 36, 0.15);
+    --g: rgba(44, 36, 92, 0.42);
+    --g2: rgba(60, 50, 120, 0.55);
+    --gb: rgba(255, 255, 255, 0.16);
+    --gs: 0 14px 40px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    --in: rgba(255, 255, 255, 0.07);
+    --ln: rgba(255, 255, 255, 0.1);
+    --o1: #6d3fe0;
+    --o2: #1b78b8;
+    --o3: #b13b78;
+    --o4: #12805e;
+    --sc: rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"],
+.app.dark,
+.app:not(.light) {
+  --bg: #0d0a22;
+  --tx: #f2f0ff;
+  --mu: #a9a4d0;
+  --pu: #a98bff;
+  --pu2: #8b5cf6;
+  --mint: #6ee7b7;
+  --mintb: rgba(52, 211, 153, 0.16);
+  --cor: #ffab8a;
+  --corb: rgba(255, 140, 100, 0.16);
+  --amb: #fbbf24;
+  --ambb: rgba(251, 191, 36, 0.15);
+  --g: rgba(44, 36, 92, 0.42);
+  --g2: rgba(60, 50, 120, 0.55);
+  --gb: rgba(255, 255, 255, 0.16);
+  --gs: 0 14px 40px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  --in: rgba(255, 255, 255, 0.07);
+  --ln: rgba(255, 255, 255, 0.1);
+  --o1: #6d3fe0;
+  --o2: #1b78b8;
+  --o3: #b13b78;
+  --o4: #12805e;
+  --sc: rgba(0, 0, 0, 0.5);
+}
+
+/* Glass Surface Utility */
+.gl {
+  background: linear-gradient(145deg, var(--g2), var(--g));
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--gb);
+  box-shadow: var(--gs);
+  position: relative;
+}
+
+/* Monospace font utility */
+.mono {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ------------------------------------------------------------
+   Modal Backdrop (.bd / .recon-modal-backdrop)
+   ------------------------------------------------------------ */
+.bd,
 .recon-modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1000;
-  padding: 16px;
-  animation: reconFadeIn 0.15s ease-out;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(30, 20, 70, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: fi 0.25s ease-out;
 }
 
-@keyframes reconFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes fi {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
+@keyframes up {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ------------------------------------------------------------
+   Modal Container (.mc / .recon-modal-container)
+   ------------------------------------------------------------ */
+.mc,
 .recon-modal-container {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--border, #334155);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 1100px;
-  max-height: 90vh;
+  width: min(1080px, 100%);
+  height: min(94vh, 920px);
+  border-radius: 36px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-  color: var(--text, #f8fafc);
   overflow: hidden;
-  font-family: inherit;
+  animation: up 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  background: linear-gradient(150deg, var(--g2), var(--g));
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--gb);
+  box-shadow: var(--gs);
+  color: var(--tx);
+  font-family: -apple-system, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
+  box-sizing: border-box;
 }
 
+/* ------------------------------------------------------------
+   Modal Header (.mh / .recon-modal-header)
+   ------------------------------------------------------------ */
+.mh,
 .recon-modal-header {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border, #334155);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--ln);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.mh svg:first-child,
+.recon-modal-header svg:first-child {
+  color: var(--pu);
+  flex-shrink: 0;
+}
+
+.mh h2,
+.recon-modal-header h2 {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--tx);
 }
 
 .recon-header-title {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.recon-header-title h2 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.recon-scope-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.recon-scope-badge.live {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.recon-scope-badge.demo {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.recon-modal-body {
-  padding: 20px 24px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex: 1;
-}
-
-/* Source & Account Controls */
-.recon-controls-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 640px) {
-  .recon-controls-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.recon-control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.recon-control-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted, #94a3b8);
-}
-
-.recon-select {
-  background: var(--bg, #0f172a);
-  border: 1px solid var(--border, #334155);
-  color: var(--text, #f8fafc);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.recon-select:focus {
-  border-color: var(--accent, #6366f1);
-}
-
-/* Dropzone */
-.recon-dropzone {
-  border: 2px dashed var(--border, #334155);
-  border-radius: 12px;
-  padding: 28px 20px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.recon-dropzone.dragging {
-  border-color: var(--accent, #6366f1);
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.recon-dropzone-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(99, 102, 241, 0.12);
-  color: var(--accent, #6366f1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 4px;
-}
-
-.recon-dropzone h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.recon-dropzone p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted, #94a3b8);
-}
-
-/* File Loaded Pill */
-.recon-file-pill {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg, #0f172a);
-  border: 1px solid var(--border, #334155);
-  border-radius: 10px;
-  padding: 12px 16px;
-  gap: 12px;
-}
-
-.recon-file-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.recon-file-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.recon-file-size {
-  font-size: 0.75rem;
-  color: var(--muted, #94a3b8);
-}
-
-/* Format Warning / Info Banner */
-.recon-format-banner {
-  border-radius: 10px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
-.recon-format-banner.provisional {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-}
-
-.recon-format-banner.missing {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
-}
-
-.recon-format-banner.verified {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #34d399;
-}
-
-/* Stats Cards Grid */
-.recon-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.recon-stat-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border, var(--line, #334155));
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recon-stat-label {
-  font-size: 0.72rem;
-  color: var(--muted, #94a3b8);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.recon-stat-value {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.recon-stat-value.debit {
-  color: #f87171;
-}
-
-.recon-stat-value.credit {
-  color: #34d399;
-}
-
-.recon-stat-value.error {
-  color: #ef4444;
-}
-
-/* Tabs Bar */
-.recon-tabs-bar {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--border, #334155);
-  padding-bottom: 8px;
-}
-
-.recon-tab-btn {
-  background: transparent;
-  border: 0;
-  color: var(--muted, #94a3b8);
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.recon-tab-btn.active {
-  background: var(--accent, #6366f1);
-  color: #ffffff;
-}
-
-/* Preview Table */
-.recon-table-wrapper {
-  overflow-x: auto;
-  border: 1px solid var(--border, var(--line, #334155));
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.recon-table {
-  width: 100%;
-  min-width: 980px;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-  text-align: left;
-}
-
-.recon-table th {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 10px 12px;
-  font-weight: 600;
-  color: var(--muted, #94a3b8);
-  border-bottom: 1px solid var(--border, var(--line, #334155));
-  white-space: nowrap;
-}
-
-.recon-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  vertical-align: middle;
-}
-
-.recon-table tr:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* Direction Badge */
-.recon-dir-badge {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.recon-dir-badge.debit {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-}
-
-.recon-dir-badge.credit {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-}
-
-/* Match & Decision Status Badges */
-.recon-match-badge,
-.recon-decision-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.recon-decision-badge.suggested {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.recon-decision-badge.confirmed {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.recon-decision-badge.rejected {
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-.recon-decision-badge.conflicting {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.recon-decision-badge.needs_review {
-  background: rgba(249, 115, 22, 0.15);
-  color: #fb923c;
-  border: 1px solid rgba(249, 115, 22, 0.3);
-}
-
-.recon-decision-badge.unmatched {
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--muted, #94a3b8);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.recon-match-badge.new {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
-}
-
-.recon-match-badge.duplicate {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-}
-
-.recon-match-badge.probable {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-}
-
-.recon-match-badge.enrichment {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-}
-
-.recon-match-badge.transfer {
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
-}
-
-/* Mini Dropdowns */
-.recon-mini-select {
-  background: var(--bg, #0f172a);
-  border: 1px solid var(--border, #334155);
-  color: var(--text, #f8fafc);
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 0.73rem;
-  outline: none;
-  cursor: pointer;
-  max-width: 130px;
-}
-
-.recon-mini-select:focus {
-  border-color: var(--accent, #6366f1);
-}
-
-/* Row Action Buttons */
-.recon-action-btn {
-  padding: 3px 8px;
-  border-radius: 5px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: 1px solid transparent;
-}
-
-.recon-action-btn.confirm {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.35);
-}
-
-.recon-action-btn.confirm:hover {
-  background: rgba(16, 185, 129, 0.28);
-}
-
-.recon-action-btn.reject {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
-  border-color: rgba(99, 102, 241, 0.35);
-}
-
-.recon-action-btn.reject:hover {
-  background: rgba(99, 102, 241, 0.28);
-}
-
-.recon-action-btn.review {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-.recon-action-btn.review:hover {
-  background: rgba(245, 158, 11, 0.28);
-}
-
-.recon-action-btn.reset {
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--muted, #94a3b8);
-  border-color: rgba(148, 163, 184, 0.25);
-}
-
-.recon-action-btn.reset:hover {
-  background: rgba(148, 163, 184, 0.2);
-  color: var(--text, #f8fafc);
-}
-
-/* Summary Panel */
-.recon-summary-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.recon-summary-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.recon-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.recon-summary-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border, var(--line, #334155));
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recon-summary-val {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.recon-summary-totals {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border, var(--line, #334155));
-  border-radius: 10px;
-  padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.85rem;
-}
-
-.recon-summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 8px;
-  color: var(--text, #f8fafc);
-  font-weight: 500;
-}
-
-.recon-summary-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-/* Modal Footer */
-.recon-modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border, #334155);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.recon-footer-notice {
-  font-size: 0.78rem;
-  color: var(--muted, #94a3b8);
-  display: flex;
-  align-items: center;
-  gap: 6px;
   flex: 1;
   min-width: 0;
 }
 
-.recon-footer-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--mintb);
+  color: var(--mint);
+  white-space: nowrap;
+  border: 1px solid var(--gb);
+  letter-spacing: 0.02em;
 }
 
-@media (max-width: 640px) {
-  .recon-modal-backdrop {
-    padding: 8px;
-  }
-
-  .recon-modal-container {
-    max-height: 96vh;
-    border-radius: 12px;
-  }
-
-  .recon-modal-header {
-    padding: 12px 16px;
-    flex-wrap: wrap;
-  }
-
-  .recon-header-title {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .recon-header-title h2 {
-    font-size: 0.98rem;
-  }
-
-  .recon-modal-body {
-    padding: 14px 16px;
-    gap: 14px;
-  }
-
-  .recon-modal-footer {
-    padding: 12px 16px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .recon-footer-notice {
-    font-size: 0.72rem;
-  }
-
-  .recon-footer-actions {
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
+.badge.demo {
+  background: var(--ambb);
+  color: var(--amb);
 }
 
-/* =========================================================================
-   Stage 8.5: Audit Report & Rollback Styles
-   ========================================================================= */
-
-.recon-audit-view {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Backward compatibility for scope badge */
+.recon-scope-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.recon-audit-header-card {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 12px;
-  padding: 16px 20px;
+.recon-scope-badge.live {
+  background: var(--mintb);
+  color: var(--mint);
+  border: 1px solid var(--gb);
+}
+
+.recon-scope-badge.demo {
+  background: var(--ambb);
+  color: var(--amb);
+  border: 1px solid var(--gb);
+}
+
+/* Icon Buttons (.ib / .action-btn) */
+.ib,
+.action-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--mu);
+  background: var(--in);
+  border: 1px solid var(--gb);
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.ib:hover,
+.action-btn:hover {
+  color: var(--tx);
+  transform: scale(1.06);
+  background: var(--g2);
+}
+
+/* ------------------------------------------------------------
+   Modal Body (.mb / .recon-modal-body)
+   ------------------------------------------------------------ */
+.mb,
+.recon-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 22px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 0;
+}
+
+/* Custom smooth scrollbar */
+.mb::-webkit-scrollbar,
+.recon-modal-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mb::-webkit-scrollbar-thumb,
+.recon-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(109, 63, 224, 0.2);
+  border-radius: 999px;
+}
+
+.mb::-webkit-scrollbar-thumb:hover,
+.recon-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--pu);
+}
+
+/* ------------------------------------------------------------
+   Source / Target Account Selectors (.row2)
+   ------------------------------------------------------------ */
+.row2,
+.recon-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.row2 label,
+.recon-control-group label {
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mu);
+}
+
+.row2 select,
+.recon-controls-row select {
+  width: 100%;
+}
+
+/* Pill Select Inputs */
+select,
+.recon-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 42px;
+  padding: 0 34px 0 14px;
+  border-radius: 999px;
+  background: var(--in) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a85b5' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 13px center;
+  border: 1px solid var(--gb);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx);
+  max-width: 100%;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+select:focus,
+.recon-select:focus {
+  border-color: var(--pu);
+  box-shadow: 0 0 0 3px rgba(109, 63, 224, 0.18);
+}
+
+select option,
+.recon-select option {
+  color: #1f1a3d;
+  background: #ffffff;
+}
+
+select:disabled,
+.recon-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   File Loaded Bar (.file / .recon-file-pill)
+   ------------------------------------------------------------ */
+.file,
+.recon-file-pill {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 22px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.file > div,
+.recon-file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.file svg,
+.recon-file-info svg {
+  color: var(--pu);
+  flex-shrink: 0;
+}
+
+.file b,
+.recon-file-name {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file small,
+.recon-file-size {
+  color: var(--mu);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------
+   Verified Statement Format Banner (.ban / .recon-format-banner)
+   ------------------------------------------------------------ */
+.ban,
+.recon-format-banner {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--mintb);
+  color: var(--mint);
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid var(--gb);
+}
+
+.ban strong,
+.recon-format-banner strong {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.ban div,
+.recon-format-banner div {
+  color: var(--tx);
+  opacity: 0.86;
+}
+
+/* Incomplete / Warning format override */
+.ban.missing,
+.recon-format-banner.missing {
+  background: var(--corb);
+  color: var(--cor);
+}
+
+/* Provisional format override */
+.ban.provisional,
+.recon-format-banner.provisional {
+  background: var(--ambb);
+  color: var(--amb);
+}
+
+/* ------------------------------------------------------------
+   Summary Stats Grid (.stats / .recon-stats-grid)
+   ------------------------------------------------------------ */
+.stats,
+.recon-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.st,
+.recon-stat-card {
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  display: grid;
+  gap: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.st:hover,
+.recon-stat-card:hover {
+  transform: translateY(-1px);
+}
+
+.st span,
+.recon-stat-label {
+  font-size: 12px;
+  color: var(--mu);
+  font-weight: 600;
+}
+
+.st b,
+.recon-stat-value {
+  font-size: 19px;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: var(--tx);
+}
+
+.recon-stat-value.debit {
+  color: var(--cor);
+}
+
+.recon-stat-value.credit {
+  color: var(--mint);
+}
+
+/* ------------------------------------------------------------
+   Segmented Navigation Tabs (.seg / .recon-tabs-bar)
+   ------------------------------------------------------------ */
+.seg,
+.recon-tabs-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  max-width: 100%;
+  min-height: 44px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.seg::-webkit-scrollbar,
+.recon-tabs-bar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.seg button,
+.recon-tab-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mu);
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seg button:hover,
+.recon-tab-btn:hover {
+  color: var(--tx);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.seg button.on,
+.seg button.active,
+.recon-tab-btn.active,
+.recon-tab-btn.on {
+  color: var(--tx);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55));
+  box-shadow: 0 3px 10px rgba(80, 60, 160, 0.2), inset 0 1px 0 #fff;
+}
+
+:root[data-theme="dark"] .seg button.on,
+:root[data-theme="dark"] .seg button.active,
+.app.dark .seg button.on,
+.app.dark .seg button.active {
+  background: rgba(169, 139, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------
+   Quick Automation Bar (.auto / .recon-automation-bar)
+   ------------------------------------------------------------ */
+.auto,
+.recon-automation-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.chips,
+.recon-automation-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.chips > span {
+  font-size: 12.5px;
+  color: var(--mu);
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.chip,
+.recon-chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  color: var(--tx);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.chip:hover,
+.recon-chip:hover {
+  background: var(--g2);
+}
+
+.chip.on,
+.chip.active,
+.recon-chip.active,
+.recon-chip.on {
+  background: var(--pu);
+  color: #ffffff !important;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(109, 63, 224, 0.35);
+}
+
+/* ------------------------------------------------------------
+   Filter & View Switcher Row (.fr / .recon-filter-row)
+   ------------------------------------------------------------ */
+.fr,
+.recon-filter-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fr .sr,
+.recon-filter-row .recon-search-box {
+  height: 40px;
+}
+
+.sr,
+.recon-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 220px;
+  padding: 0 14px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--in);
+  color: var(--mu);
+  border: 1px solid var(--gb);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.sr input,
+.recon-search-box input {
+  flex: 1;
+  min-width: 0;
+  outline: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tx);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.sr input::placeholder,
+.recon-search-box input::placeholder {
+  color: var(--mu);
+  opacity: 0.8;
+}
+
+/* Views Segmented Control (#views / .recon-view-switcher) */
+#views button,
+.recon-view-switcher button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ------------------------------------------------------------
+   Cards Feed Grid (.feed / .recon-card-feed)
+   ------------------------------------------------------------ */
+.feed,
+.recon-card-feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+/* Card Component (.tc / .recon-tx-card) */
+.tc,
+.recon-tx-card {
+  padding: 15px;
+  border-radius: 26px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  display: grid;
+  gap: 11px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+}
+
+.tc:hover,
+.recon-tx-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(109, 63, 224, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Big Card for Slide Deck */
+.tc.big,
+.recon-slide-card {
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 24px;
+  gap: 16px;
+  border-radius: 32px;
+}
+
+.tc.big .am {
+  font-size: 38px;
+}
+
+/* Card Header (.t1) */
+.t1,
+.recon-tx-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.t1 span {
+  font-size: 12px;
+  color: var(--mu);
+}
+
+.t1 b {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tx);
+}
+
+.ref {
+  font-family: "DM Mono", monospace;
+  font-size: 11.5px;
+  background: var(--in);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--gb);
+  color: var(--mu);
+}
+
+/* Card Amount & Direction (.t2) */
+.t2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.am {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.cr,
+.am.cr,
+.amount-credit,
+.recon-tx-card-amount.credit {
+  color: var(--mint);
+}
+
+.db,
+.am.db,
+.amount-debit,
+.recon-tx-card-amount.debit {
+  color: var(--cor);
+}
+
+.dir {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.dir.debit,
+.recon-dir-badge.debit {
+  background: var(--corb);
+  color: var(--cor);
+}
+
+.dir.credit,
+.recon-dir-badge.credit {
+  background: var(--mintb);
+  color: var(--mint);
+}
+
+/* Merchant Row (.mer) */
+.mer,
+.recon-tx-card-merchant {
+  font-weight: 600;
+  font-size: 14.5px;
+  text-transform: capitalize;
+  color: var(--tx);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Controls Row (.ctl) */
+.ctl,
+.recon-tx-card-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.ctl select,
+.recon-tx-card-controls select {
+  height: 36px;
+  font-size: 12px;
+  width: 100%;
+  padding-left: 12px;
+}
+
+.ctl select:last-child {
+  grid-column: span 2;
+}
+
+/* Card Bottom Action Row (.t4) */
+.t4,
+.recon-tx-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--mintb);
+  color: var(--mint);
+}
+
+.ok.m {
+  background: var(--ambb);
+  color: var(--amb);
+}
+
+.t4 > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--mint);
+}
+
+.mod {
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pu);
+  background: var(--in);
+  border: 1px solid var(--gb);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mod:hover {
+  background: var(--g2);
+  transform: scale(1.04);
+}
+
+/* ------------------------------------------------------------
+   Interactive Slide Deck (.deck / .recon-slide-deck)
+   ------------------------------------------------------------ */
+.deck,
+.recon-slide-deck {
+  display: grid;
+  gap: 14px;
+}
+
+.dn,
+.recon-slide-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--mu);
+}
+
+.recon-slide-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.recon-slide-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--mu);
+}
+
+.recon-slide-progress-bar-bg {
+  height: 6px;
+  background: var(--in);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--gb);
+}
+
+.recon-slide-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9b78ff, #6d3fe0);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* ------------------------------------------------------------
+   Spreadsheet Table (.tw / .recon-table-wrapper)
+   ------------------------------------------------------------ */
+.tw,
+.recon-table-wrapper {
+  overflow: auto;
+  border-radius: 24px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  max-height: 520px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+table,
+.recon-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  min-width: 820px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mu);
+  background: var(--g2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--ln);
+  z-index: 2;
+}
+
+td {
+  padding: 10px 14px;
+  border-top: 1px solid var(--ln);
+  white-space: nowrap;
+  color: var(--tx);
+}
+
+td:nth-child(7),
+th:nth-child(7),
+.recon-table td.amount-cell,
+.recon-table th.amount-cell {
+  text-align: right;
+}
+
+tr:hover td {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ------------------------------------------------------------
+   Panels: Summary (.pn) and Warnings (.pn.w)
+   ------------------------------------------------------------ */
+.pn,
+.recon-summary-view {
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  display: grid;
+  gap: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.pn h3,
+.recon-summary-view h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tx);
+  margin: 0;
+}
+
+.pn p,
+.recon-summary-view p {
+  color: var(--mu);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pn.w,
+.recon-warning-view {
+  background: var(--ambb);
+  color: var(--amb);
+}
+
+.pn.w p,
+.recon-warning-view p {
+  color: var(--tx);
+  opacity: 0.88;
+}
+
+/* ------------------------------------------------------------
+   Modal Footer (.mf / .recon-modal-footer)
+   ------------------------------------------------------------ */
+.mf,
+.recon-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 22px;
+  border-top: 1px solid var(--ln);
+  background: var(--in);
+  flex-shrink: 0;
+}
+
+.fn,
+.recon-footer-status {
+  display: grid;
+  gap: 3px;
+}
+
+.fn strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tx);
+}
+
+.fn span {
+  color: var(--mu);
+  font-size: 12.5px;
+}
+
+.fa,
+.recon-footer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------
+   Pill Action Buttons (.btn / .btn.o / .btn.p)
+   ------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  border: 0;
+  cursor: pointer;
+}
+
+.btn.o,
+.outline-button {
+  background: var(--in);
+  border: 1px solid var(--gb);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--tx);
+}
+
+.btn.o:hover,
+.outline-button:hover {
+  background: var(--g2);
+  transform: translateY(-1px);
+}
+
+.btn.p,
+.primary-button {
+  color: #ffffff !important;
+  background: linear-gradient(140deg, #9b78ff, #6d3fe0);
+  box-shadow: 0 8px 22px rgba(109, 63, 224, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn.p:hover,
+.primary-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.btn:disabled,
+.primary-button:disabled,
+.outline-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  filter: none;
+}
+
+/* ------------------------------------------------------------
+   Empty State (.empty)
+   ------------------------------------------------------------ */
+.empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 56px 16px;
+}
+
+.empty > i,
+.empty > svg {
+  width: 76px;
+  height: 76px;
+  border-radius: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--pu);
+  background: var(--in);
+  border: 1px solid var(--gb);
+  box-shadow: var(--gs);
+  padding: 16px;
+}
+
+.empty h3 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--tx);
+  margin: 0;
+}
+
+.empty p {
+  color: var(--mu);
+  max-width: 420px;
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.empty div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------------------
+   Dropzone (Initial File Selection Mode)
+   ------------------------------------------------------------ */
+.recon-dropzone {
+  border: 2px dashed rgba(109, 63, 224, 0.35);
+  border-radius: 28px;
+  padding: 44px 24px;
+  text-align: center;
+  background: var(--in);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.recon-dropzone:hover,
+.recon-dropzone.dragging {
+  border-color: var(--pu);
+  background: var(--g2);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(109, 63, 224, 0.15);
+}
+
+.recon-dropzone-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(155, 120, 255, 0.2), rgba(109, 63, 224, 0.25));
+  color: var(--pu);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(109, 63, 224, 0.2);
+}
+
+.recon-dropzone h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tx);
+}
+
+.recon-dropzone p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mu);
+  max-width: 480px;
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------
+   Committed Batch Audit View (.recon-audit-view)
+   ------------------------------------------------------------ */
+.recon-audit-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recon-audit-header-card {
+  padding: 18px 22px;
+  border-radius: 26px;
+  background: var(--in);
+  border: 1px solid var(--gb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .recon-audit-header-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .recon-audit-header-title h3 {
-  margin: 0;
-  font-size: 1.1rem;
+  font-size: 18px;
   font-weight: 700;
-  color: #10b981;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.02em;
 }
 
 .recon-audit-header-meta {
-  font-size: 0.8rem;
-  color: var(--muted, #94a3b8);
+  font-size: 12.5px;
+  color: var(--mu);
 }
 
 .recon-audit-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .recon-audit-metric-card {
-  background: var(--bg, #0f172a);
-  border: 1px solid var(--border, #334155);
-  border-radius: 10px;
-  padding: 12px 16px;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--in);
+  border: 1px solid var(--gb);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .recon-audit-metric-card .label {
-  font-size: 0.75rem;
-  color: var(--muted, #94a3b8);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  color: var(--mu);
   font-weight: 600;
 }
 
 .recon-audit-metric-card .value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text, #f8fafc);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .recon-balance-card {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--border, #334155);
-  border-radius: 12px;
-  padding: 16px 20px;
+  padding: 18px 22px;
+  border-radius: 26px;
+  background: var(--in);
+  border: 1px solid var(--gb);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .recon-balance-card h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--text, #f8fafc);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -723,7 +1342,7 @@
 .recon-balance-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .recon-balance-row {
@@ -731,104 +1350,61 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  font-size: 13px;
 }
 
 .recon-balance-row .title {
-  color: var(--muted, #94a3b8);
+  color: var(--mu);
+  font-weight: 500;
 }
 
 .recon-balance-row .num {
   font-weight: 700;
-  font-family: monospace;
+  color: var(--tx);
 }
 
-.recon-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  line-height: 1.4;
+/* ------------------------------------------------------------
+   Responsive Adjustments
+   ------------------------------------------------------------ */
+@media (max-width: 1000px) {
+  .stats,
+  .recon-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
-.recon-status-badge.conclusive {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #34d399;
+@media (max-width: 680px) {
+  .row2,
+  .recon-controls-row {
+    grid-template-columns: 1fr;
+  }
+  .stats,
+  .recon-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mc,
+  .recon-modal-container {
+    border-radius: 28px;
+    height: 96vh;
+    padding: 0;
+  }
+  .mb,
+  .recon-modal-body {
+    padding: 14px 16px;
+  }
+  .mf,
+  .recon-modal-footer {
+    padding: 14px 16px;
+  }
 }
 
-.recon-status-badge.inconclusive {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
-}
-
-.recon-rollback-box {
-  background: rgba(239, 68, 68, 0.05);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.recon-rollback-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recon-rollback-info strong {
-  color: #f87171;
-  font-size: 0.9rem;
-}
-
-.recon-rollback-info span {
-  font-size: 0.78rem;
-  color: var(--muted, #94a3b8);
-}
-
-.recon-precommit-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  font-size: 0.82rem;
-}
-
-.danger-button {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.15s ease;
-}
-
-.danger-button:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.danger-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.primary-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

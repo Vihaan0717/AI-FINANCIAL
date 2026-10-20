@@ -28,3 +28,15 @@ dist-ssr
 .env*.local
 .env.production
 .env.development
+
+# Temporary inspection & analysis files
+decompress*.mjs
+parse_bundle.mjs
+decompressed_*.js
+decompressed_code.js
+extract_artifact.js
+extracted.html
+template*.html
+body_content.html
+Money Mate*.html
+

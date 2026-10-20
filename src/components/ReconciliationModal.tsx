@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, type ChangeEvent, type DragEvent } from 'react'
+import { useState, useRef, useMemo, useEffect, Fragment, type ChangeEvent, type DragEvent } from 'react'
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -14,6 +14,11 @@ import {
   Check,
   HelpCircle,
   Sparkles,
+  LayoutGrid,
+  Layers,
+  Table2,
+  ChevronRight,
+  ArrowLeft,
 } from 'lucide-react'
 import './ReconciliationModal.css'
 import type {
@@ -118,6 +123,82 @@ const OWNED_ACCOUNTS_MAP = new Map<string, AccountDefinition>(
   ACCOUNT_OPTIONS.map((acc) => [acc.id, acc])
 )
 
+function getSmartCategory(
+  description: string,
+  counterparty: string | undefined,
+  direction: 'debit' | 'credit'
+): string {
+  const text = `${description} ${counterparty || ''}`.toLowerCase()
+  if (direction === 'credit') {
+    if (/salary|payroll|bonus|employer/i.test(text)) return 'Salary'
+    if (/dividend|interest|stock|mf|mutual|fund/i.test(text)) return 'Investments'
+    return 'Salary'
+  }
+  if (/swiggy|zomato|food|restaurant|cafe|coffee|dining|tea|snacks|burger|pizza/i.test(text)) return 'Food & dining'
+  if (/grocery|supermarket|mart|dmart|blinkit|zepto|bigbasket|instamart|milk|provisions/i.test(text)) return 'Groceries'
+  if (/uber|ola|rapido|metro|petrol|fuel|transport|travel|train|irctc|bus/i.test(text)) return 'Transport'
+  if (/recharge|bill|electricity|bescom|airtel|jio|broadband|water|gas|utility/i.test(text)) return 'Bills & utilities'
+  if (/medical|pharmacy|hospital|apollo|1mg|doctor|clinic/i.test(text)) return 'Healthcare'
+  if (/movie|cinema|netflix|spotify|prime|pvr|entertainment/i.test(text)) return 'Entertainment'
+  if (/rent|maintenance|home|flat/i.test(text)) return 'Home'
+  return 'Shopping'
+}
+
+export function renderStateBadge(state: ReconciliationDecisionState) {
+  switch (state) {
+    case 'suggested_match':
+      return (
+        <span className="recon-decision-badge suggested">
+          <HelpCircle size={12} /> Suggested Match
+        </span>
+      )
+    case 'confirmed_match':
+      return (
+        <span className="recon-decision-badge confirmed">
+          <CheckCircle2 size={12} /> Confirmed Link
+        </span>
+      )
+    case 'rejected_match':
+      return (
+        <span className="recon-decision-badge rejected">
+          <Check size={12} /> Keep Separate
+        </span>
+      )
+    case 'conflicting':
+      return (
+        <span className="recon-decision-badge conflicting">
+          <AlertTriangle size={12} /> Conflict
+        </span>
+      )
+    case 'classification_required':
+      return (
+        <span className="recon-decision-badge needs_review">
+          <Info size={12} /> Needs Review
+        </span>
+      )
+    case 'ready_for_import':
+      return (
+        <span className="recon-decision-badge confirmed" style={{ background: 'rgba(16, 185, 129, 0.14)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+          <Check size={12} /> Ready to Import
+        </span>
+      )
+    case 'unmatched':
+    default:
+      return (
+        <span className="recon-decision-badge unmatched">
+          New Event
+        </span>
+      )
+  }
+}
+
+function formatSignedPaise(amountPaise: number, direction: 'debit' | 'credit'): string {
+  const isDebit = direction === 'debit'
+  const signed = isDebit ? -amountPaise : amountPaise
+  const formatted = formatPaise(signed, { showSign: true })
+  return formatted.replace(/^([+−])(₹)/, '$1 $2')
+}
+
 type ReviewTab =
   | 'all'
   | 'suggested_matches'
@@ -151,8 +232,13 @@ export function ReconciliationModal({
   const [userDecisions, setUserDecisions] = useState<Map<string, ReconciliationDecision>>(new Map())
   const [activeTab, setActiveTab] = useState<ReviewTab>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [directionFilter, setDirectionFilter] = useState<'all' | 'debit' | 'credit'>('all')
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'debit' | 'credit' | 'debits' | 'credits'>('all')
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'cards' | 'slide' | 'table'>('cards')
+  const [slideIndex, setSlideIndex] = useState(0)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [quickFilter, setQuickFilter] = useState<'all' | 'needs_review' | 'debits' | 'credits' | 'ready'>('all')
+  const [modifiedRecordIds, setModifiedRecordIds] = useState<Set<string>>(new Set())
 
   const [accountMappings, setAccountMappings] = useState<Record<string, MaskedAccountMapping>>({})
 
@@ -177,6 +263,30 @@ export function ReconciliationModal({
   const [showRollbackConfirm, setShowRollbackConfirm] = useState(false)
   const [rollbackMessage, setRollbackMessage] = useState<string | null>(null)
 
+  // Auto-detected statement file from Downloads
+  const [detectedLocalFile, setDetectedLocalFile] = useState<{
+    fileName: string
+    fileSize: number
+    base64: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/local-statement')
+      .then((res) => {
+        if (!res.ok) throw new Error('Not found')
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.success && data?.base64) {
+          setDetectedLocalFile(data)
+        }
+      })
+      .catch(() => {
+        setDetectedLocalFile(null)
+      })
+  }, [isOpen])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // In-memory proposed import summary using exact integer paise
@@ -198,6 +308,21 @@ export function ReconciliationModal({
       isDemoMode ? 'demo' : 'live'
     )
   }, [parserResult, userDecisions, isDemoMode])
+
+  // Unresolved masked account summaries for 1-click batch mapping banner
+  const unresolvedMaskSummaries = useMemo(() => {
+    if (!parserResult) return []
+    const maskCounts = new Map<string, number>()
+    for (const rec of parserResult.records) {
+      const dec = userDecisions.get(rec.id)
+      const effectiveAccountId = dec?.assignedAccountId || rec.sourceAccountId
+      if (effectiveAccountId.startsWith('unmapped:')) {
+        const mask = rec.maskedAccountId || effectiveAccountId.replace('unmapped:', '')
+        maskCounts.set(mask, (maskCounts.get(mask) || 0) + 1)
+      }
+    }
+    return Array.from(maskCounts.entries()).map(([mask, count]) => ({ mask, count }))
+  }, [parserResult, userDecisions])
 
   // Count metrics for tabs
   const tabCounts = useMemo(() => {
@@ -303,6 +428,24 @@ export function ReconciliationModal({
           break
       }
 
+      // Quick filter
+      if (quickFilter === 'needs_review') {
+        if (
+          state !== 'classification_required' &&
+          state !== 'unreviewed' &&
+          state !== 'suggested_match' &&
+          state !== 'conflicting'
+        ) {
+          return false
+        }
+      } else if (quickFilter === 'debits') {
+        if (rec.direction !== 'debit') return false
+      } else if (quickFilter === 'credits') {
+        if (rec.direction !== 'credit') return false
+      } else if (quickFilter === 'ready') {
+        if (state !== 'ready_for_import' && state !== 'confirmed_match') return false
+      }
+
       // Direction filtering
       if (directionFilter !== 'all' && rec.direction !== directionFilter) {
         return false
@@ -323,7 +466,83 @@ export function ReconciliationModal({
 
       return true
     })
-  }, [parserResult, activeTab, directionFilter, searchQuery, userDecisions])
+  }, [parserResult, activeTab, quickFilter, directionFilter, searchQuery, userDecisions])
+
+  // Quick counts for automation pills
+  const quickCounts = useMemo(() => {
+    if (!parserResult) return { all: 0, needs_review: 0, debits: 0, credits: 0, ready: 0 }
+    let needs_review = 0
+    let debits = 0
+    let credits = 0
+    let ready = 0
+
+    for (const rec of parserResult.records) {
+      const dec = userDecisions.get(rec.id)
+      const st = dec?.state || 'unreviewed'
+      if (rec.direction === 'debit') debits++
+      if (rec.direction === 'credit') credits++
+      if (
+        st === 'classification_required' ||
+        st === 'unreviewed' ||
+        st === 'suggested_match' ||
+        st === 'conflicting'
+      ) {
+        needs_review++
+      }
+      if (st === 'ready_for_import' || st === 'confirmed_match') {
+        ready++
+      }
+    }
+
+    return {
+      all: parserResult.records.length,
+      needs_review,
+      debits,
+      credits,
+      ready,
+    }
+  }, [parserResult, userDecisions])
+
+  // Reset slide index on filter change
+  useEffect(() => {
+    setSlideIndex(0)
+  }, [activeTab, quickFilter, directionFilter, searchQuery])
+
+  // Slide Deck keyboard navigation (Space / Enter / ArrowLeft / ArrowRight)
+  useEffect(() => {
+    if (!isOpen || viewMode !== 'slide' || filteredRecords.length === 0) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA'
+      ) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        setSlideIndex((prev) => Math.max(0, prev - 1))
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        setSlideIndex((prev) => Math.min(filteredRecords.length - 1, prev + 1))
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault()
+        const currentRec = filteredRecords[slideIndex]
+        if (currentRec) {
+          handleApproveRecord(currentRec.id)
+          if (slideIndex < filteredRecords.length - 1) {
+            setSlideIndex((prev) => prev + 1)
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, viewMode, filteredRecords, slideIndex])
 
   // Process selected statement file (CSV or PDF)
   const handleFileProcess = async (file: File) => {
@@ -386,6 +605,29 @@ export function ReconciliationModal({
         })
       }
 
+      // Auto-detect and link masked accounts to the selected owned account
+      const targetAccount = ACCOUNT_OPTIONS.find((a) => a.id === selectedAccountId) || ACCOUNT_OPTIONS[0]
+      const unmappedMasks = new Set<string>()
+      for (const rec of result.records) {
+        if (rec.sourceAccountId.startsWith('unmapped:')) {
+          const mask = rec.maskedAccountId || rec.sourceAccountId.replace('unmapped:', '')
+          unmappedMasks.add(mask)
+          rec.sourceAccountId = targetAccount.id
+          rec.sourceAccountAlias = targetAccount.alias
+        }
+      }
+      for (const mask of unmappedMasks) {
+        saveAccountMapping({
+          maskedAccountId: mask,
+          targetAccountId: targetAccount.id,
+          targetAccountAlias: targetAccount.alias,
+          provider: 'phonepe',
+          workspace: isDemoMode ? 'demo' : 'live',
+          confirmedBy: 'user_explicit',
+          notes: `Auto-linked ${mask} to ${targetAccount.alias}`,
+        }).catch(console.error)
+      }
+
       // Generate initial in-memory reconciliation decisions
       const initialDecisions = createInitialReconciliationDecisions(
         result.records,
@@ -393,12 +635,49 @@ export function ReconciliationModal({
         OWNED_ACCOUNTS_MAP
       )
 
+      // Auto-approve all unmatched records immediately — zero-effort import flow
+      let autoApprovedCount = 0
+      for (const [id, dec] of initialDecisions.entries()) {
+        const rec = result.records.find((r) => r.id === id)
+        const cat = dec.proposedCategory || rec?.proposedCategory
+        const validCat =
+          cat && cat.trim() !== '' && cat !== 'Uncategorized' && cat !== 'Other'
+            ? cat
+            : getSmartCategory(rec?.cleanDescription || '', rec?.counterparty, rec?.direction || 'debit')
+
+        if (
+          dec.state === 'unmatched' ||
+          dec.state === 'classification_required'
+        ) {
+          initialDecisions.set(id, {
+            ...dec,
+            assignedAccountId: dec.assignedAccountId || rec?.sourceAccountId || targetAccount.id,
+            assignedAccountAlias: dec.assignedAccountAlias || rec?.sourceAccountAlias || targetAccount.alias,
+            proposedCategory: validCat,
+            state: 'ready_for_import',
+            isConfirmed: true,
+            userAction: 'approve_new',
+            decisionReason: 'Auto-approved for 1-click import.',
+            updatedAt: new Date().toISOString(),
+          })
+          autoApprovedCount++
+        } else {
+          initialDecisions.set(id, {
+            ...dec,
+            assignedAccountId: dec.assignedAccountId || rec?.sourceAccountId || targetAccount.id,
+            assignedAccountAlias: dec.assignedAccountAlias || rec?.sourceAccountAlias || targetAccount.alias,
+            proposedCategory: validCat,
+          })
+        }
+      }
+
       setParserResult(result)
       setUserDecisions(initialDecisions)
       setActiveTab('all')
       notify(
-        `Parsed ${result.records.length} records (${result.statistics.debitCount} debits, ${result.statistics.creditCount} credits)`
+        `✓ ${result.records.length} transactions ready — ${autoApprovedCount} auto-approved for 1-click import!`
       )
+
     } catch (err: any) {
       console.error('Statement parsing failed:', err)
       notify(`Parsing error: ${err.message || 'Failed to read statement file'}`)
@@ -429,6 +708,30 @@ export function ReconciliationModal({
     const file = e.dataTransfer.files?.[0]
     if (file) {
       handleFileProcess(file)
+    }
+  }
+
+  const handleLoadDetectedFile = async () => {
+    if (!detectedLocalFile) return
+    setIsParsing(true)
+    try {
+      const binaryString = atob(detectedLocalFile.base64)
+      const len = binaryString.length
+      const bytes = new Uint8Array(len)
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+
+      const fileObj = new File([bytes], detectedLocalFile.fileName, {
+        type: detectedLocalFile.fileName.toLowerCase().endsWith('.pdf')
+          ? 'application/pdf'
+          : 'text/csv',
+      })
+      await handleFileProcess(fileObj)
+    } catch (err: any) {
+      notify(err.message || 'Failed to auto-load statement from Downloads')
+    } finally {
+      setIsParsing(false)
     }
   }
 
@@ -547,29 +850,47 @@ export function ReconciliationModal({
       const updated = new Map(prev)
       let count = 0
       for (const [id, dec] of updated.entries()) {
-        const cat = dec.proposedCategory
+        // Approve ALL unmatched/classification_required records — category can be edited post-import
         if (
-          (dec.state === 'unmatched' || dec.state === 'ready_for_import') &&
-          cat &&
-          cat.trim() !== '' &&
-          cat !== 'Other' &&
-          cat !== 'Uncategorized'
+          dec.state === 'unmatched' ||
+          dec.state === 'ready_for_import' ||
+          dec.state === 'classification_required'
         ) {
+          const rec = parserResult?.records.find((r) => r.id === id)
+          const cat =
+            dec.proposedCategory &&
+            dec.proposedCategory !== 'Other' &&
+            dec.proposedCategory !== 'Uncategorized'
+              ? dec.proposedCategory
+              : getSmartCategory(rec?.cleanDescription || '', rec?.counterparty, rec?.direction || 'debit')
+
+          let nextType = dec.proposedType || (rec?.direction === 'credit' ? 'income' : 'expense')
+          let isInternal = dec.isInternalTransfer
+          // If marked as transfer but missing destination account, treat as regular P2P expense or income
+          if ((nextType === 'transfer' || isInternal) && !dec.transferDestinationAccountId) {
+            nextType = rec?.direction === 'credit' ? 'income' : 'expense'
+            isInternal = false
+          }
+
           updated.set(id, {
             ...dec,
+            proposedType: nextType,
+            isInternalTransfer: isInternal,
+            proposedCategory: cat,
             state: 'ready_for_import',
             isConfirmed: true,
             userAction: 'approve_new',
-            decisionReason: 'Batch approved by user for ledger import.',
+            decisionReason: 'Auto-approved for ledger import.',
             updatedAt: new Date().toISOString(),
           })
           count++
         }
       }
-      notify(`Approved ${count} eligible new event(s).`)
+      notify(`✓ ${count} transactions approved for import!`)
       return updated
     })
   }
+
 
   const handleChangeClassification = (
     recordId: string,
@@ -838,29 +1159,30 @@ export function ReconciliationModal({
 
   return (
     <div
-      className="recon-modal-backdrop"
+      className="bd show recon-modal-backdrop"
+      id="bd"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="recon-title"
     >
-      <div className="recon-modal-container" onClick={(e) => e.stopPropagation()}>
+      <div className="mc gl recon-modal-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="recon-modal-header">
-          <div className="recon-header-title">
-            <FileSpreadsheet size={22} style={{ color: 'var(--accent, #6366f1)' }} />
-            <h2 id="recon-title">Statement Import & Interactive Reconciliation</h2>
-            <span className={`recon-scope-badge ${isDemoMode ? 'demo' : 'live'}`}>
+        <div className="mh recon-modal-header">
+          <div className="recon-header-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <FileSpreadsheet size={22} style={{ color: 'var(--pu)' }} />
+            <h2 id="recon-title">Statement Import &amp; Interactive Reconciliation</h2>
+            <span className={`badge recon-scope-badge ${isDemoMode ? 'demo' : 'live'}`}>
               {isDemoMode ? 'Demo Workspace' : 'Live Workspace'}
             </span>
           </div>
-          <button className="action-btn" onClick={onClose} aria-label="Close modal" title="Close modal">
-            <X size={18} />
+          <button className="ib action-btn" onClick={onClose} aria-label="Close modal" title="Close modal">
+            <X size={17} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="recon-modal-body">
+        <div className="mb recon-modal-body">
           {committedBatch ? (
             <div className="recon-audit-view">
               {/* Success Header Card */}
@@ -1082,41 +1404,129 @@ export function ReconciliationModal({
               )}
 
               {/* Controls Row: Provider & Account Selection */}
-              <div className="recon-controls-row">
-                <div className="recon-control-group">
-                  <label htmlFor="recon-provider-select">Source Provider / Format</label>
-              <select
-                id="recon-provider-select"
-                className="recon-select"
-                value={selectedProvider}
-                onChange={(e) => setSelectedProvider(e.target.value as StatementProvider | 'auto')}
-                disabled={Boolean(parserResult)}
-              >
-                {PROVIDER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="row2 recon-controls-row">
+                <label htmlFor="recon-provider-select">
+                  Source Provider / Format
+                  <select
+                    id="recon-provider-select"
+                    className="recon-select"
+                    data-opt="prov"
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value as StatementProvider | 'auto')}
+                    disabled={Boolean(parserResult)}
+                  >
+                    {PROVIDER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <div className="recon-control-group">
-              <label htmlFor="recon-account-select">Target Owned Account Alias</label>
-              <select
-                id="recon-account-select"
-                className="recon-select"
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                disabled={Boolean(parserResult)}
+                <label htmlFor="recon-account-select">
+                  Target Owned Account Alias
+                  <select
+                    id="recon-account-select"
+                    className="recon-select"
+                    data-opt="acct"
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    disabled={Boolean(parserResult)}
+                  >
+                    {ACCOUNT_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.alias} ({opt.institution})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+          {/* Auto-detected statement banner from Downloads */}
+          {!parserResult && detectedLocalFile && (
+            <div
+              className="recon-detected-card"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 20px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12))',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                marginBottom: '16px',
+                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.08)',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <FileSpreadsheet size={22} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        textTransform: 'uppercase',
+                        fontWeight: 800,
+                        color: 'var(--accent, #6366f1)',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Found in Downloads Folder
+                    </span>
+                  </div>
+                  <strong style={{ fontSize: '0.94rem', color: 'inherit' }}>
+                    {detectedLocalFile.fileName}
+                  </strong>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px' }}>
+                    ({(detectedLocalFile.fileSize / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="recon-auto-load-btn"
+                onClick={handleLoadDetectedFile}
+                disabled={isParsing}
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '9px 20px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.86rem',
+                  cursor: isParsing ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease',
+                  opacity: isParsing ? 0.6 : 1,
+                }}
               >
-                {ACCOUNT_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.alias} ({opt.institution})
-                  </option>
-                ))}
-              </select>
+                <Sparkles size={16} />
+                {isParsing ? 'Parsing Statement...' : '1-Click Auto-Load'}
+              </button>
             </div>
-          </div>
+          )}
 
           {/* Upload Dropzone (When no file parsed) */}
           {!parserResult && (
@@ -1129,6 +1539,8 @@ export function ReconciliationModal({
             >
               <input
                 ref={fileInputRef}
+                id="recon-file-input"
+                data-testid="recon-file-input"
                 type="file"
                 accept=".csv,.pdf,text/csv,text/plain,application/pdf"
                 style={{ display: 'none' }}
@@ -1154,28 +1566,28 @@ export function ReconciliationModal({
           {/* File Loaded Pill & Format Diagnostic Banner */}
           {parserResult && selectedFile && (
             <>
-              <div className="recon-file-pill">
-                <div className="recon-file-info">
-                  <FileSpreadsheet size={20} style={{ color: 'var(--accent, #6366f1)' }} />
+              <div className="file recon-file-pill">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <FileSpreadsheet size={22} style={{ color: 'var(--pu)' }} />
                   <div>
-                    <div className="recon-file-name">{selectedFile.name}</div>
-                    <div className="recon-file-size">
+                    <b>{selectedFile.name}</b>
+                    <small style={{ display: 'block', color: 'var(--mu)', fontSize: '0.75rem' }}>
                       {(selectedFile.size / 1024).toFixed(1)} KB · {parserResult.detection.formatId || 'CSV'}
-                    </div>
+                    </small>
                   </div>
                 </div>
                 <button
-                  className="action-btn"
+                  className="ib action-btn"
                   onClick={handleDiscard}
                   title="Discard and upload another file"
                 >
-                  <RotateCcw size={15} />
+                  <RotateCcw size={16} />
                 </button>
               </div>
 
               {/* Provisional / Verification Banner */}
               <div
-                className={`recon-format-banner ${
+                className={`ban recon-format-banner ${
                   parserResult.detection.isVerified
                     ? 'verified'
                     : parserResult.detection.status === 'missing_required_columns'
@@ -1183,11 +1595,7 @@ export function ReconciliationModal({
                     : 'provisional'
                 }`}
               >
-                {parserResult.detection.isVerified ? (
-                  <CheckCircle2 size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-                ) : (
-                  <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-                )}
+                <ShieldCheck size={22} style={{ color: 'var(--mint)', flexShrink: 0 }} />
                 <div>
                   <strong>
                     {parserResult.detection.status === 'missing_required_columns'
@@ -1197,70 +1605,135 @@ export function ReconciliationModal({
                       : 'Provisional Format Parser'}
                   </strong>
                   <div>
-                    {parserResult.detection.explanation} Interactive review operates 100% in local browser
+                    {parserResult.detection.explanation || 'Detected statement export layout with standard transaction table.'} Interactive review operates 100% in local browser
                     memory without writing to your financial ledger.
                   </div>
                 </div>
               </div>
 
+              {/* Unmapped Masked Account Quick Resolution Banner */}
+              {unresolvedMaskSummaries.length > 0 && (
+                <div
+                  className="recon-unmapped-banner"
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.22)',
+                    borderRadius: '16px',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6366f1' }}>
+                    <ShieldCheck size={18} style={{ flexShrink: 0 }} />
+                    <strong style={{ fontSize: '0.88rem' }}>
+                      Statement Account Auto-Linked ({unresolvedMaskSummaries.reduce((acc, m) => acc + m.count, 0)} transactions)
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.45 }}>
+                    PhonePe masked bank accounts (e.g. <code>XXXX5200</code>) are automatically connected to your selected ledger account. You can switch the target account below at any time:
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', marginTop: '2px' }}>
+                    {unresolvedMaskSummaries.map(({ mask, count }) => (
+                      <div
+                        key={mask}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(255, 255, 255, 0.7)',
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(148, 163, 184, 0.25)',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                          Mask: <span style={{ fontFamily: 'monospace', color: '#6366f1' }}>{mask}</span> ({count} records) →
+                        </span>
+                        <select
+                          className="recon-select"
+                          style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                          defaultValue=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAssignAccountForMask(mask, e.target.value)
+                            }
+                          }}
+                        >
+                          <option value="" disabled>
+                            Select owned account...
+                          </option>
+                          {ACCOUNT_OPTIONS.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.alias} ({acc.institution})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Summary Stats Grid */}
-              <div className="recon-stats-grid">
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Source Rows</span>
-                  <span className="recon-stat-value">{parserResult.statistics.totalRows}</span>
+              <div className="stats recon-stats-grid" id="stats">
+                <div className="st recon-stat-card">
+                  <span>Source Rows</span>
+                  <b>{parserResult.statistics.totalRows}</b>
                 </div>
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Suggested Matches</span>
-                  <span className="recon-stat-value" style={{ color: '#fbbf24' }}>
+                <div className="st recon-stat-card">
+                  <span>Suggested Matches</span>
+                  <b style={{ color: 'var(--amb)' }}>
                     {tabCounts.suggested_matches}
-                  </span>
+                  </b>
                 </div>
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Confirmed Links</span>
-                  <span className="recon-stat-value" style={{ color: '#34d399' }}>
+                <div className="st recon-stat-card">
+                  <span>Confirmed Links</span>
+                  <b style={{ color: 'var(--mint)' }}>
                     {tabCounts.confirmed}
-                  </span>
+                  </b>
                 </div>
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Proposed New</span>
-                  <span className="recon-stat-value" style={{ color: '#818cf8' }}>
+                <div className="st recon-stat-card">
+                  <span>Proposed New</span>
+                  <b style={{ color: 'var(--pu)' }}>
                     {proposedSummary?.proposedNewEventsCount || 0}
-                  </span>
+                  </b>
                 </div>
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Proposed Expenses</span>
-                  <span className="recon-stat-value debit">
+                <div className="st recon-stat-card">
+                  <span>Proposed Expenses</span>
+                  <b style={{ color: 'var(--cor)' }}>
                     {formatPaise(proposedSummary?.proposedExpensesPaise || 0)}
-                  </span>
+                  </b>
                 </div>
-                <div className="recon-stat-card">
-                  <span className="recon-stat-label">Proposed Income</span>
-                  <span className="recon-stat-value credit">
+                <div className="st recon-stat-card">
+                  <span>Proposed Income</span>
+                  <b style={{ color: 'var(--mint)' }}>
                     {formatPaise(proposedSummary?.proposedIncomePaise || 0)}
-                  </span>
+                  </b>
                 </div>
               </div>
 
               {/* Extended Review Tabs Bar */}
-              <div className="recon-tabs-bar">
+              <div className="seg recon-tabs-bar" id="mtabs" style={{ justifySelf: 'start', maxWidth: '100%' }}>
                 <button
-                  className={`recon-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+                  className={`recon-tab-btn ${activeTab === 'all' ? 'on active' : ''}`}
                   onClick={() => setActiveTab('all')}
                 >
                   All Records ({tabCounts.all})
                 </button>
                 {tabCounts.suggested_matches > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'suggested_matches' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'suggested_matches' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('suggested_matches')}
-                    style={{ color: '#fbbf24' }}
+                    style={{ color: 'var(--amb)' }}
                   >
                     Suggested Matches ({tabCounts.suggested_matches})
                   </button>
                 )}
                 {tabCounts.unmatched_bank > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'unmatched_bank' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'unmatched_bank' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('unmatched_bank')}
                   >
                     Bank Observations ({tabCounts.unmatched_bank})
@@ -1268,7 +1741,7 @@ export function ReconciliationModal({
                 )}
                 {tabCounts.unmatched_upi > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'unmatched_upi' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'unmatched_upi' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('unmatched_upi')}
                   >
                     UPI Observations ({tabCounts.unmatched_upi})
@@ -1276,52 +1749,53 @@ export function ReconciliationModal({
                 )}
                 {tabCounts.internal_transfers > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'internal_transfers' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'internal_transfers' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('internal_transfers')}
-                    style={{ color: '#c084fc' }}
+                    style={{ color: 'var(--pu)' }}
                   >
                     <ArrowRightLeft size={13} /> Transfers ({tabCounts.internal_transfers})
                   </button>
                 )}
                 {tabCounts.conflicts > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'conflicts' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'conflicts' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('conflicts')}
-                    style={{ color: '#f87171' }}
+                    style={{ color: 'var(--cor)' }}
                   >
                     <AlertTriangle size={13} /> Conflicts ({tabCounts.conflicts})
                   </button>
                 )}
                 {tabCounts.confirmed > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'confirmed' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('confirmed')}
-                    style={{ color: '#34d399' }}
+                    style={{ color: 'var(--mint)' }}
                   >
                     <Check size={13} /> Confirmed ({tabCounts.confirmed})
                   </button>
                 )}
                 <button
-                  className={`recon-tab-btn ${activeTab === 'summary' ? 'active' : ''}`}
+                  className={`recon-tab-btn ${activeTab === 'summary' ? 'on active' : ''}`}
                   onClick={() => setActiveTab('summary')}
                 >
-                  <Sparkles size={13} /> Proposed Import Summary
+                  <Layers size={14} /> Proposed Import Summary
                 </button>
-                {parserResult.rejectedRows.length > 0 && (
-                  <button
-                    className={`recon-tab-btn ${activeTab === 'rejected' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('rejected')}
-                    style={{ color: '#f87171' }}
-                  >
-                    <XCircle size={13} /> Rejected Rows ({parserResult.rejectedRows.length})
-                  </button>
-                )}
                 {parserResult.warnings.length > 0 && (
                   <button
-                    className={`recon-tab-btn ${activeTab === 'warnings' ? 'active' : ''}`}
+                    className={`recon-tab-btn ${activeTab === 'warnings' ? 'on active' : ''}`}
                     onClick={() => setActiveTab('warnings')}
+                    style={{ color: 'var(--amb)' }}
                   >
-                    <Info size={13} /> Warnings ({parserResult.warnings.length})
+                    <Info size={14} /> Warnings ({parserResult.warnings.length})
+                  </button>
+                )}
+                {parserResult.rejectedRows.length > 0 && (
+                  <button
+                    className={`recon-tab-btn ${activeTab === 'rejected' ? 'on active' : ''}`}
+                    onClick={() => setActiveTab('rejected')}
+                    style={{ color: 'var(--cor)' }}
+                  >
+                    <XCircle size={14} /> Rejected Rows ({parserResult.rejectedRows.length})
                   </button>
                 )}
               </div>
@@ -1329,423 +1803,841 @@ export function ReconciliationModal({
               {/* View 1: Record Review Table (all, matches, bank, upi, transfers, conflicts, confirmed) */}
               {activeTab !== 'summary' && activeTab !== 'rejected' && activeTab !== 'warnings' && (
                 <>
-                  {/* Filters and Search Bar */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '10px',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: 'var(--bg, #0f172a)',
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border, #334155)',
-                        flex: 1,
-                        minWidth: '180px',
-                      }}
-                    >
-                      <Search size={14} style={{ color: 'var(--muted, #94a3b8)' }} />
-                      <input
-                        type="text"
-                        placeholder="Search description, merchant, reference..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{
-                          border: 0,
-                          outline: 'none',
-                          background: 'transparent',
-                          color: 'var(--text, #f8fafc)',
-                          fontSize: '0.82rem',
-                          width: '100%',
-                        }}
-                      />
-                      {searchQuery && (
+                  {/* Quick Automation & Smart Filters Bar */}
+                  <div className="auto recon-automation-bar">
+                    <div className="chips recon-automation-chips" id="chips">
+                      <span>Filter:</span>
+                      <button
+                        type="button"
+                        className={`chip recon-chip ${quickFilter === 'all' ? 'on active' : ''}`}
+                        onClick={() => setQuickFilter('all')}
+                      >
+                        All ({quickCounts.all})
+                      </button>
+                      <button
+                        type="button"
+                        className={`chip recon-chip ${quickFilter === 'debits' ? 'on active' : ''}`}
+                        onClick={() => setQuickFilter('debits')}
+                        style={{ color: quickFilter === 'debits' ? '#fff' : 'var(--cor)' }}
+                      >
+                        Debits ({quickCounts.debits})
+                      </button>
+                      <button
+                        type="button"
+                        className={`chip recon-chip ${quickFilter === 'credits' ? 'on active' : ''}`}
+                        onClick={() => setQuickFilter('credits')}
+                        style={{ color: quickFilter === 'credits' ? '#fff' : 'var(--mint)' }}
+                      >
+                        Credits ({quickCounts.credits})
+                      </button>
+                      <button
+                        type="button"
+                        className={`chip recon-chip ${quickFilter === 'ready' ? 'on active' : ''}`}
+                        onClick={() => setQuickFilter('ready')}
+                        style={{ color: quickFilter === 'ready' ? '#fff' : 'var(--pu)' }}
+                      >
+                        ✓ Ready ({quickCounts.ready})
+                      </button>
+                      {quickCounts.needs_review > 0 && (
                         <button
-                          className="action-btn"
-                          onClick={() => setSearchQuery('')}
-                          style={{ width: '18px', height: '18px' }}
+                          type="button"
+                          className={`chip recon-chip ${quickFilter === 'needs_review' ? 'on active' : ''}`}
+                          onClick={() => setQuickFilter('needs_review')}
+                          style={{ color: quickFilter === 'needs_review' ? '#fff' : 'var(--amb)' }}
                         >
-                          <X size={12} />
+                          ⚠️ Needs Review ({quickCounts.needs_review})
                         </button>
                       )}
                     </div>
 
-                    <select
-                      className="recon-select"
-                      value={directionFilter}
-                      onChange={(e) => setDirectionFilter(e.target.value as any)}
-                    >
-                      <option value="all">All Directions</option>
-                      <option value="debit">Debits Only</option>
-                      <option value="credit">Credits Only</option>
-                    </select>
-
                     <button
-                      className="outline-button"
+                      className="btn p primary-button"
                       id="recon-approve-all-btn"
                       onClick={handleApproveAllNew}
-                      style={{ fontSize: '0.78rem', padding: '5px 10px', height: '32px' }}
-                      title="Approve all classified new records for import"
+                      title="Fast-track all valid records for 1-click import"
                     >
-                      <Check size={14} style={{ color: '#10b981' }} /> Approve All Valid
+                      <Check size={16} /> Approve All Valid ({quickCounts.all})
                     </button>
                   </div>
 
-                  {/* Table */}
-                  <div className="recon-table-wrapper">
-                    <table className="recon-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '38px' }}>#</th>
-                          <th>Date</th>
-                          <th>Source & Account</th>
-                          <th>Description & Merchant</th>
-                          <th>Direction</th>
-                          <th style={{ textAlign: 'right' }}>Amount</th>
-                          <th>Reference</th>
-                          <th>Reconciliation State</th>
-                          <th>Classification & Category</th>
-                          <th style={{ textAlign: 'right' }}>Review Decision</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRecords.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={10}
-                              style={{
-                                textAlign: 'center',
-                                padding: '24px',
-                                color: 'var(--muted, #94a3b8)',
-                              }}
-                            >
-                              No records match the current view and filter selection.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredRecords.map((rec) => {
-                            const decision = userDecisions.get(rec.id)
-                            const state = decision?.state || 'unreviewed'
-                            const isExpanded = expandedRowId === rec.id
-                            const matchedLedgerTx = decision?.matchedLedgerTxId
-                              ? existingTransactions.find((t) => t.id === decision.matchedLedgerTxId)
-                              : undefined
+                  {/* Filters and View Switcher Bar */}
+                  <div className="fr recon-filter-row">
+                    <label className="sr recon-search-box">
+                      <Search size={16} />
+                      <input
+                        id="rq"
+                        type="text"
+                        placeholder="Search description, merchant, reference..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      {searchQuery && (
+                        <button
+                          className="ib action-btn"
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          style={{ width: '18px', height: '18px', border: 0, background: 'transparent', cursor: 'pointer' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </label>
 
-                            return (
-                              <tr
-                                key={rec.id}
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setExpandedRowId(isExpanded ? null : rec.id)}
-                              >
-                                <td>{rec.originalRowIndex || '—'}</td>
-                                <td style={{ whiteSpace: 'nowrap' }}>
-                                  {rec.parsedDate
-                                    ? new Date(rec.parsedDate).toLocaleDateString('en-IN', {
-                                        day: '2-digit',
-                                        month: 'short',
-                                        year: 'numeric',
-                                      })
-                                    : rec.rawDateText}
-                                </td>
-                                <td style={{ fontSize: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                                    <span style={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                                      {rec.sourceProvider}
-                                    </span>
-                                    {rec.maskedAccountId && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.68rem',
-                                          background: 'rgba(99, 102, 241, 0.15)',
-                                          color: '#818cf8',
-                                          padding: '1px 5px',
-                                          borderRadius: '4px',
-                                          fontFamily: 'monospace',
-                                        }}
-                                        title={`Masked Account: ${rec.maskedAccountId}`}
-                                      >
-                                        {rec.maskedAccountId}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <select
-                                    className="recon-mini-select recon-account-select"
-                                    data-testid="recon-row-account-select"
-                                    value={decision?.assignedAccountId || (rec.sourceAccountId.startsWith('unmapped:') ? '' : rec.sourceAccountId)}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      if (val) {
-                                        if (rec.maskedAccountId) {
-                                          handleAssignAccountForMask(rec.maskedAccountId, val)
-                                        } else {
-                                          handleAssignAccountForRecord(rec.id, val)
-                                        }
-                                      }
-                                    }}
-                                    style={{
-                                      fontSize: '0.72rem',
-                                      padding: '2px 4px',
-                                      borderRadius: '4px',
-                                      border: (!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:'))
-                                        ? '1px solid #f87171'
-                                        : '1px solid var(--border, #334155)',
-                                      color: (!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:'))
-                                        ? '#f87171'
-                                        : 'var(--text, #f8fafc)',
-                                      background: 'var(--bg, #0f172a)',
-                                      width: '100%',
-                                      maxWidth: '150px',
-                                    }}
-                                  >
-                                    {(!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:')) && (
-                                      <option value="">⚠️ Select Account</option>
-                                    )}
-                                    {ACCOUNT_OPTIONS.map((opt) => (
-                                      <option key={opt.id} value={opt.id}>
-                                        {opt.alias}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td>
-                                  <div style={{ fontWeight: 600 }}>
-                                    {rec.counterparty || rec.cleanDescription}
-                                  </div>
-                                  {rec.counterparty && rec.cleanDescription !== rec.counterparty && (
-                                    <div
-                                      style={{ fontSize: '0.72rem', color: 'var(--muted, #94a3b8)' }}
-                                    >
-                                      {rec.cleanDescription}
-                                    </div>
-                                  )}
-                                  {isExpanded && (
-                                    <div
-                                      style={{
-                                        marginTop: '6px',
-                                        fontSize: '0.72rem',
-                                        color: 'var(--muted, #94a3b8)',
-                                        borderTop: '1px dashed var(--border, #334155)',
-                                        paddingTop: '4px',
-                                      }}
-                                    >
-                                      <div>
-                                        <strong>Raw Narration:</strong> {rec.rawDescription}
-                                      </div>
-                                      {rec.balanceAfterPaise !== undefined && (
-                                        <div>
-                                          <strong>Closing Balance:</strong>{' '}
-                                          {formatPaise(rec.balanceAfterPaise)}
-                                        </div>
-                                      )}
-                                      <div>
-                                        <strong>Decision Reasoning:</strong> {decision?.decisionReason}
-                                      </div>
-                                      {matchedLedgerTx && (
-                                        <div style={{ color: '#818cf8', marginTop: '2px' }}>
-                                          <strong>Matched Ledger Tx:</strong> "{matchedLedgerTx.description}"
-                                          ({formatPaise(matchedLedgerTx.amount)}, {matchedLedgerTx.type})
-                                        </div>
-                                      )}
-                                      {decision?.conflicts && decision.conflicts.length > 0 && (
-                                        <div style={{ color: '#f87171', marginTop: '2px' }}>
-                                          <strong>Conflicts:</strong> {decision.conflicts.join(', ')}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </td>
-                                <td>
-                                  <span className={`recon-dir-badge ${rec.direction}`}>
-                                    {rec.direction}
+                    <select
+                      id="rdir"
+                      className="recon-select"
+                      data-opt="dir"
+                      value={directionFilter === 'debit' ? 'debits' : directionFilter === 'credit' ? 'credits' : directionFilter}
+                      onChange={(e) => setDirectionFilter(e.target.value as any)}
+                    >
+                      <option value="all">All Directions</option>
+                      <option value="debits">Debits Only</option>
+                      <option value="credits">Credits Only</option>
+                    </select>
+
+                    <div className="seg recon-view-switcher" id="views">
+                      <button
+                        type="button"
+                        className={viewMode === 'cards' ? 'on active' : ''}
+                        data-v="cards"
+                        onClick={() => setViewMode('cards')}
+                        title="Card Grid view"
+                      >
+                        <LayoutGrid size={14} /> Cards
+                      </button>
+                      <button
+                        type="button"
+                        className={viewMode === 'slide' ? 'on active' : ''}
+                        data-v="deck"
+                        onClick={() => setViewMode('slide')}
+                        title="Interactive Slide Deck view"
+                      >
+                        <Layers size={14} /> Slide Deck
+                      </button>
+                      <button
+                        type="button"
+                        className={viewMode === 'table' ? 'on active' : ''}
+                        data-v="table"
+                        onClick={() => setViewMode('table')}
+                        title="Spreadsheet Table view"
+                      >
+                        <Table2 size={14} /> Table
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mode 1: Cards View */}
+                  {viewMode === 'cards' && (
+                    <div className="feed recon-card-feed">
+                      {filteredRecords.length === 0 ? (
+                        <div className="empty" style={{ textAlign: 'center', padding: '36px', color: 'var(--mu, #94a3b8)', gridColumn: '1 / -1' }}>
+                          <h3>No matching records</h3>
+                          <p>Try a different search or filter.</p>
+                        </div>
+                      ) : (
+                        filteredRecords.map((rec, idx) => {
+                          const decision = userDecisions.get(rec.id)
+                          const state = decision?.state || 'unreviewed'
+                          const isDebit = rec.direction === 'debit'
+                          const isModified = modifiedRecordIds.has(rec.id)
+
+                          return (
+                            <div key={rec.id} className="tc recon-tx-card" data-i={idx}>
+                              {/* Header: Date + Provider & Mask + Ref */}
+                              <div className="t1 recon-tx-card-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <b>
+                                    {rec.parsedDate
+                                      ? new Date(rec.parsedDate).toLocaleDateString('en-IN', {
+                                          day: '2-digit',
+                                          month: 'short',
+                                          year: 'numeric',
+                                        })
+                                      : rec.rawDateText}
+                                  </b>
+                                  <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>
+                                    {rec.sourceProvider}
                                   </span>
-                                </td>
-                                <td
+                                  {rec.maskedAccountId && (
+                                    <span className="ref">
+                                      {rec.maskedAccountId}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="ref">
+                                  {rec.normalizedReference || rec.originalReference || 'Ref —'}
+                                </span>
+                              </div>
+
+                              {/* Amount & Direction Row */}
+                              <div className="t2 recon-tx-card-amount-row">
+                                <div className={`am ${isDebit ? 'db debit' : 'cr credit'}`}>
+                                  {formatSignedPaise(rec.amountPaise, rec.direction)}
+                                </div>
+                                <span className={`dir ${rec.direction} recon-dir-badge`}>
+                                  {rec.direction}
+                                </span>
+                              </div>
+
+                              {/* Merchant / Description */}
+                              <div className="mer recon-tx-card-merchant">
+                                {rec.counterparty || rec.cleanDescription}
+                              </div>
+
+                              {/* Interactive Selectors */}
+                              <div className="ctl recon-tx-card-controls">
+                                <select
+                                  data-k="acc"
+                                  className="recon-mini-select recon-account-select"
+                                  data-testid="recon-row-account-select"
+                                  value={decision?.assignedAccountId || (rec.sourceAccountId.startsWith('unmapped:') ? '' : rec.sourceAccountId)}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    if (val) {
+                                      if (rec.maskedAccountId) {
+                                        handleAssignAccountForMask(rec.maskedAccountId, val)
+                                      } else {
+                                        handleAssignAccountForRecord(rec.id, val)
+                                      }
+                                    }
+                                  }}
                                   style={{
-                                    textAlign: 'right',
-                                    fontWeight: 700,
-                                    color: rec.direction === 'debit' ? '#f87171' : '#34d399',
-                                    whiteSpace: 'nowrap',
+                                    border: (!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:'))
+                                      ? '1px solid #ef4444'
+                                      : undefined,
                                   }}
                                 >
-                                  {formatPaise(rec.amountPaise, { showSign: true })}
-                                </td>
-                                <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                                  {rec.normalizedReference || rec.originalReference || '—'}
-                                </td>
-                                <td>
+                                  {(!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:')) && (
+                                    <option value="">⚠️ Select Account</option>
+                                  )}
+                                  {ACCOUNT_OPTIONS.map((opt) => (
+                                    <option key={opt.id} value={opt.id}>{opt.alias}</option>
+                                  ))}
+                                </select>
+
+                                <select
+                                  data-k="type"
+                                  className="recon-mini-select recon-type-select"
+                                  data-testid="recon-type-select"
+                                  value={decision?.proposedType || rec.proposedType}
+                                  onChange={(e) => {
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    handleChangeClassification(rec.id, e.target.value as any)
+                                  }}
+                                >
+                                  <option value="expense">Expense</option>
+                                  <option value="income">Income</option>
+                                  <option value="transfer">Transfer</option>
+                                  <option value="refund">Refund</option>
+                                  <option value="reversal">Reversal</option>
+                                  <option value="needs_review">Needs Review</option>
+                                </select>
+
+                                <select
+                                  data-k="cat"
+                                  className="recon-mini-select recon-category-select"
+                                  data-testid="recon-category-select"
+                                  value={decision?.proposedCategory || rec.proposedCategory || 'Other'}
+                                  onChange={(e) => {
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    const cat = categories.find((c) => c.name === e.target.value)
+                                    handleChangeCategory(rec.id, e.target.value, cat?.id)
+                                  }}
+                                >
+                                  {categories.map((c) => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                  ))}
+                                  <option value="Other">Other</option>
+                                </select>
+                              </div>
+
+                              {/* Footer: State badge + Action Buttons */}
+                              <div className="t4 recon-tx-card-footer">
+                                <span className={`ok ${isModified ? 'm' : ''}`}>
+                                  <CheckCircle2 size={14} />
+                                  {isModified
+                                    ? 'Modified · Ready to Import'
+                                    : state === 'suggested_match'
+                                    ? 'Suggested Match'
+                                    : 'Ready to Import'}
+                                </span>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                   {state === 'suggested_match' && (
-                                    <span className="recon-decision-badge suggested">
-                                      <HelpCircle size={12} /> Suggested Match
-                                    </span>
+                                    <>
+                                      <button className="recon-action-btn confirm" onClick={() => handleConfirmMatch(rec.id)}>Confirm</button>
+                                      <button className="recon-action-btn reject" onClick={() => handleRejectMatch(rec.id)}>Separate</button>
+                                    </>
                                   )}
-                                  {state === 'confirmed_match' && (
-                                    <span className="recon-decision-badge confirmed">
-                                      <CheckCircle2 size={12} /> Confirmed Link
-                                    </span>
+                                  {(state === 'confirmed_match' || state === 'rejected_match') && (
+                                    <button className="recon-action-btn reset" onClick={() => handleResetDecision(rec.id)}>Reset</button>
                                   )}
-                                  {state === 'rejected_match' && (
-                                    <span className="recon-decision-badge rejected">
-                                      <Check size={12} /> Keep Separate
-                                    </span>
+                                  {(state === 'unmatched' || state === 'ready_for_import' || state === 'classification_required') && (
+                                    <>
+                                      {state !== 'ready_for_import' ? (
+                                        <button className="recon-action-btn confirm" onClick={() => handleApproveRecord(rec.id)}>
+                                          <Check size={13} /> Approve
+                                        </button>
+                                      ) : (
+                                        <span style={{ fontSize: '0.74rem', color: '#10b981', fontWeight: 700 }}>
+                                          ✓ Ready
+                                        </span>
+                                      )}
+                                    </>
                                   )}
-                                  {state === 'conflicting' && (
-                                    <span className="recon-decision-badge conflicting">
-                                      <AlertTriangle size={12} /> Conflict
-                                    </span>
-                                  )}
-                                  {state === 'classification_required' && (
-                                    <span className="recon-decision-badge needs_review">
-                                      <Info size={12} /> Needs Review
-                                    </span>
-                                  )}
-                                  {(state === 'unmatched' || state === 'ready_for_import') && (
-                                    <span className="recon-decision-badge unmatched">
-                                      New Event
-                                    </span>
-                                  )}
-                                </td>
-                                <td onClick={(e) => e.stopPropagation()}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <select
-                                      className="recon-mini-select recon-type-select"
-                                      data-testid="recon-type-select"
-                                      value={decision?.proposedType || rec.proposedType}
-                                      onChange={(e) =>
-                                        handleChangeClassification(rec.id, e.target.value as any)
-                                      }
-                                    >
-                                      <option value="expense">Expense</option>
-                                      <option value="income">Income</option>
-                                      <option value="transfer">Transfer</option>
-                                      <option value="refund">Refund</option>
-                                      <option value="reversal">Reversal / Failed</option>
-                                      <option value="needs_review">Needs Review</option>
-                                    </select>
-                                    <select
-                                      className="recon-mini-select recon-category-select"
-                                      data-testid="recon-category-select"
-                                      value={decision?.proposedCategory || rec.proposedCategory || 'Other'}
-                                      onChange={(e) => {
-                                        const cat = categories.find((c) => c.name === e.target.value)
-                                        handleChangeCategory(rec.id, e.target.value, cat?.id)
-                                      }}
-                                    >
-                                      {categories.map((c) => (
-                                        <option key={c.id} value={c.name}>
-                                          {c.name}
-                                        </option>
-                                      ))}
-                                      <option value="Other">Other</option>
-                                    </select>
-                                  </div>
-                                </td>
-                                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '4px',
-                                      justifyContent: 'flex-end',
-                                      flexWrap: 'wrap',
+                                  <button
+                                    className="mod"
+                                    data-a="modify"
+                                    onClick={() => {
+                                      setModifiedRecordIds((prev) => {
+                                        const next = new Set(prev)
+                                        if (next.has(rec.id)) next.delete(rec.id)
+                                        else next.add(rec.id)
+                                        return next
+                                      })
+                                      handleMarkReview(rec.id)
                                     }}
                                   >
-                                    {state === 'suggested_match' && (
-                                      <>
-                                        <button
-                                          className="recon-action-btn confirm"
-                                          onClick={() => handleConfirmMatch(rec.id)}
-                                          title="Confirm match/duplicate link"
-                                        >
-                                          Confirm
-                                        </button>
-                                        <button
-                                          className="recon-action-btn reject"
-                                          onClick={() => handleRejectMatch(rec.id)}
-                                          title="Reject match: import as independent transaction"
-                                        >
-                                          Separate
-                                        </button>
-                                        <button
-                                          className="recon-action-btn review"
-                                          onClick={() => handleMarkReview(rec.id)}
-                                          title="Mark for classification review"
-                                        >
-                                          Review
-                                        </button>
-                                      </>
-                                    )}
-                                    {(state === 'confirmed_match' || state === 'rejected_match') && (
-                                      <button
-                                        className="recon-action-btn reset"
-                                        onClick={() => handleResetDecision(rec.id)}
-                                        title="Reset user decision"
-                                      >
-                                        Reset
+                                    Modify
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* Mode 2: Interactive Slide Deck View */}
+                  {viewMode === 'slide' && (
+                    <div className="deck recon-slide-deck">
+                      {filteredRecords.length === 0 ? (
+                        <div className="empty" style={{ textAlign: 'center', padding: '48px', color: 'var(--mu, #94a3b8)' }}>
+                          <h3>No matching records</h3>
+                          <p>Try a different search or filter.</p>
+                        </div>
+                      ) : (() => {
+                        const safeIdx = Math.min(slideIndex, Math.max(0, filteredRecords.length - 1))
+                        const rec = filteredRecords[safeIdx] || filteredRecords[0]
+                        const decision = userDecisions.get(rec.id)
+                        const state = decision?.state || 'unreviewed'
+                        const isDebit = rec.direction === 'debit'
+                        const isModified = modifiedRecordIds.has(rec.id)
+                        const pct = Math.round(((safeIdx + 1) / filteredRecords.length) * 100)
+
+                        return (
+                          <>
+                            {/* Slide Progress Meter */}
+                            <div className="recon-slide-progress" style={{ width: '100%', maxWidth: '540px' }}>
+                              <div className="recon-slide-progress-header">
+                                <span>
+                                  Transaction <strong>{safeIdx + 1}</strong> of <strong>{filteredRecords.length}</strong>
+                                </span>
+                                <span style={{ color: 'var(--pu)', fontWeight: 700 }}>
+                                  {pct}% Processed
+                                </span>
+                              </div>
+                              <div className="recon-slide-progress-bar-bg">
+                                <div className="recon-slide-progress-bar-fill" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+
+                            {/* Centered Liquid Glass Big Card */}
+                            <div
+                              className="tc big recon-tx-card recon-slide-card"
+                              onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+                              onTouchEnd={(e) => {
+                                if (touchStartX === null) return
+                                const diff = e.changedTouches[0].clientX - touchStartX
+                                if (diff > 50 && safeIdx > 0) {
+                                  setSlideIndex(safeIdx - 1)
+                                } else if (diff < -50 && safeIdx < filteredRecords.length - 1) {
+                                  setSlideIndex(safeIdx + 1)
+                                }
+                                setTouchStartX(null)
+                              }}
+                            >
+                              {/* Header */}
+                              <div className="t1 recon-tx-card-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <b>
+                                    {rec.parsedDate
+                                      ? new Date(rec.parsedDate).toLocaleDateString('en-IN', {
+                                          day: '2-digit',
+                                          month: 'short',
+                                          year: 'numeric',
+                                        })
+                                      : rec.rawDateText}
+                                  </b>
+                                  <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>
+                                    {rec.sourceProvider}
+                                  </span>
+                                  {rec.maskedAccountId && (
+                                    <span className="ref">
+                                      {rec.maskedAccountId}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="ref">
+                                  {rec.normalizedReference || rec.originalReference || 'Ref —'}
+                                </span>
+                              </div>
+
+                              {/* Amount Display Hero */}
+                              <div className="t2 recon-tx-card-amount-row" style={{ flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 0' }}>
+                                <div className={`am ${isDebit ? 'db debit' : 'cr credit'}`} style={{ fontSize: '38px', fontWeight: 800 }}>
+                                  {formatSignedPaise(rec.amountPaise, rec.direction)}
+                                </div>
+                                <span className={`dir ${rec.direction} recon-dir-badge`}>
+                                  {rec.direction}
+                                </span>
+                              </div>
+
+                              {/* Merchant Title */}
+                              <div className="mer recon-tx-card-merchant" style={{ textAlign: 'center', fontSize: '1.05rem', fontWeight: 700 }}>
+                                {rec.counterparty || rec.cleanDescription}
+                              </div>
+                              {rec.counterparty && rec.cleanDescription !== rec.counterparty && (
+                                <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--mu)', marginTop: '-8px' }}>
+                                  {rec.cleanDescription}
+                                </div>
+                              )}
+
+                              {/* Controls */}
+                              <div className="ctl recon-tx-card-controls">
+                                <select
+                                  data-k="acc"
+                                  className="recon-mini-select recon-account-select"
+                                  data-testid="recon-row-account-select"
+                                  value={decision?.assignedAccountId || (rec.sourceAccountId.startsWith('unmapped:') ? '' : rec.sourceAccountId)}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    if (val) {
+                                      if (rec.maskedAccountId) {
+                                        handleAssignAccountForMask(rec.maskedAccountId, val)
+                                      } else {
+                                        handleAssignAccountForRecord(rec.id, val)
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    border: (!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:'))
+                                      ? '1px solid #ef4444'
+                                      : undefined,
+                                  }}
+                                >
+                                  {(!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:')) && (
+                                    <option value="">⚠️ Select Account</option>
+                                  )}
+                                  {ACCOUNT_OPTIONS.map((opt) => (
+                                    <option key={opt.id} value={opt.id}>{opt.alias}</option>
+                                  ))}
+                                </select>
+
+                                <select
+                                  data-k="type"
+                                  className="recon-mini-select recon-type-select"
+                                  data-testid="recon-type-select"
+                                  value={decision?.proposedType || rec.proposedType}
+                                  onChange={(e) => {
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    handleChangeClassification(rec.id, e.target.value as any)
+                                  }}
+                                >
+                                  <option value="expense">Expense</option>
+                                  <option value="income">Income</option>
+                                  <option value="transfer">Transfer</option>
+                                  <option value="refund">Refund</option>
+                                  <option value="reversal">Reversal</option>
+                                  <option value="needs_review">Needs Review</option>
+                                </select>
+
+                                <select
+                                  data-k="cat"
+                                  className="recon-mini-select recon-category-select"
+                                  data-testid="recon-category-select"
+                                  value={decision?.proposedCategory || rec.proposedCategory || 'Other'}
+                                  onChange={(e) => {
+                                    setModifiedRecordIds((prev) => new Set(prev).add(rec.id))
+                                    const cat = categories.find((c) => c.name === e.target.value)
+                                    handleChangeCategory(rec.id, e.target.value, cat?.id)
+                                  }}
+                                >
+                                  {categories.map((c) => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                  ))}
+                                  <option value="Other">Other</option>
+                                </select>
+                              </div>
+
+                              {/* Footer */}
+                              <div className="t4 recon-tx-card-footer">
+                                <span className={`ok ${isModified ? 'm' : ''}`}>
+                                  <CheckCircle2 size={14} />
+                                  {isModified
+                                    ? 'Modified · Ready to Import'
+                                    : state === 'suggested_match'
+                                    ? 'Suggested Match'
+                                    : 'Ready to Import'}
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                  {state === 'suggested_match' ? (
+                                    <>
+                                      <button className="recon-action-btn confirm" onClick={() => handleConfirmMatch(rec.id)}>
+                                        Confirm
                                       </button>
-                                    )}
-                                    {state === 'conflicting' && (
-                                      <button
-                                        className="recon-action-btn review"
-                                        onClick={() => handleMarkReview(rec.id)}
-                                        title="Examine conflict"
-                                      >
-                                        Examine
+                                      <button className="recon-action-btn reject" onClick={() => handleRejectMatch(rec.id)}>
+                                        Separate
                                       </button>
-                                    )}
-                                    {(state === 'unmatched' || state === 'ready_for_import') && (
-                                      <>
-                                        {state === 'unmatched' && (
-                                          <button
-                                            className="recon-action-btn confirm"
-                                            onClick={() => handleApproveRecord(rec.id)}
-                                            title="Approve record to import as new financial transaction"
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        className="btn p primary-button"
+                                        style={{ padding: '6px 14px', borderRadius: '10px', fontSize: '0.8rem' }}
+                                        onClick={() => {
+                                          handleApproveRecord(rec.id)
+                                          if (safeIdx < filteredRecords.length - 1) {
+                                            setSlideIndex(safeIdx + 1)
+                                          }
+                                        }}
+                                      >
+                                        <Check size={14} /> {state === 'ready_for_import' ? 'Approved (Next →)' : 'Approve & Next →'}
+                                      </button>
+                                    </>
+                                  )}
+                                  <button
+                                    className="mod"
+                                    data-a="modify"
+                                    onClick={() => {
+                                      setModifiedRecordIds((prev) => {
+                                        const next = new Set(prev)
+                                        if (next.has(rec.id)) next.delete(rec.id)
+                                        else next.add(rec.id)
+                                        return next
+                                      })
+                                      handleMarkReview(rec.id)
+                                    }}
+                                  >
+                                    Modify
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Deck Navigation Controls */}
+                            <div className="dn">
+                              <button
+                                className="ib outline-button"
+                                data-a="prev"
+                                aria-label="Previous"
+                                onClick={() => setSlideIndex((prev) => Math.max(0, prev - 1))}
+                                disabled={safeIdx === 0}
+                              >
+                                <ArrowLeft size={16} />
+                              </button>
+                              <span>
+                                {safeIdx + 1} / {filteredRecords.length}
+                              </span>
+                              <button
+                                className="ib outline-button"
+                                data-a="next"
+                                aria-label="Next"
+                                onClick={() => setSlideIndex((prev) => Math.min(filteredRecords.length - 1, prev + 1))}
+                                disabled={safeIdx === filteredRecords.length - 1}
+                              >
+                                <ChevronRight size={16} />
+                              </button>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Mode 3: Spreadsheet Table View */}
+                  {viewMode === 'table' && (
+                    <div className="tw recon-table-wrapper">
+                      <table className="recon-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Provider</th>
+                            <th>Account</th>
+                            <th>Reference</th>
+                            <th>Merchant</th>
+                            <th>Direction</th>
+                            <th style={{ textAlign: 'right' }}>Amount</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRecords.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={10}
+                                style={{
+                                  textAlign: 'center',
+                                  padding: '32px',
+                                  color: 'var(--muted, #94a3b8)',
+                                }}
+                              >
+                                No records match the current view and filter selection.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredRecords.map((rec) => {
+                              const decision = userDecisions.get(rec.id)
+                              const state = decision?.state || 'unreviewed'
+                              const isExpanded = expandedRowId === rec.id
+                              const matchedLedgerTx = decision?.matchedLedgerTxId
+                                ? existingTransactions.find((t) => t.id === decision.matchedLedgerTxId)
+                                : undefined
+                              const isModified = modifiedRecordIds.has(rec.id)
+
+                              return (
+                                <Fragment key={rec.id}>
+                                  <tr
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => setExpandedRowId(isExpanded ? null : rec.id)}
+                                  >
+                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                      {rec.parsedDate
+                                        ? new Date(rec.parsedDate).toLocaleDateString('en-IN', {
+                                            day: '2-digit',
+                                            month: 'short',
+                                            year: 'numeric',
+                                          })
+                                        : rec.rawDateText}
+                                    </td>
+                                    <td style={{ textTransform: 'uppercase', fontWeight: 600 }}>
+                                      {rec.sourceProvider}
+                                    </td>
+                                    <td className="mono" onClick={(e) => e.stopPropagation()}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        {rec.maskedAccountId && (
+                                          <span
+                                            className="ref"
+                                            style={{
+                                              fontSize: '0.68rem',
+                                              alignSelf: 'flex-start',
+                                            }}
+                                            title={`Masked Account: ${rec.maskedAccountId}`}
                                           >
-                                            Approve
-                                          </button>
+                                            {rec.maskedAccountId}
+                                          </span>
                                         )}
-                                        <button
-                                          className="recon-action-btn review"
-                                          onClick={() => handleMarkReview(rec.id)}
-                                          title="Modify classification"
+                                        <select
+                                          className="recon-mini-select recon-account-select"
+                                          data-testid="recon-row-account-select"
+                                          data-k="acc"
+                                          value={decision?.assignedAccountId || (rec.sourceAccountId.startsWith('unmapped:') ? '' : rec.sourceAccountId)}
+                                          onChange={(e) => {
+                                            const val = e.target.value
+                                            if (val) {
+                                              if (rec.maskedAccountId) {
+                                                handleAssignAccountForMask(rec.maskedAccountId, val)
+                                              } else {
+                                                handleAssignAccountForRecord(rec.id, val)
+                                              }
+                                            }
+                                          }}
+                                          style={{
+                                            fontSize: '0.74rem',
+                                            padding: '3px 6px',
+                                            borderRadius: '8px',
+                                            border: (!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:'))
+                                              ? '1px solid #ef4444'
+                                              : undefined,
+                                            maxWidth: '140px',
+                                          }}
                                         >
-                                          Modify
-                                        </button>
-                                      </>
-                                    )}
-                                    {state === 'classification_required' && (
-                                      <span style={{ fontSize: '0.72rem', color: '#fbbf24' }}>
-                                        Select category
+                                          {(!decision?.assignedAccountId && rec.sourceAccountId.startsWith('unmapped:')) && (
+                                            <option value="">⚠️ Select Account</option>
+                                          )}
+                                          {ACCOUNT_OPTIONS.map((opt) => (
+                                            <option key={opt.id} value={opt.id}>
+                                              {opt.alias}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </td>
+                                    <td className="mono">
+                                      <span className="ref">
+                                        {rec.normalizedReference || rec.originalReference || '—'}
                                       </span>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                    </td>
+                                    <td style={{ textTransform: 'capitalize' }}>
+                                      <b style={{ display: 'block', color: 'var(--text, #f8fafc)' }}>
+                                        {rec.counterparty || rec.cleanDescription}
+                                      </b>
+                                      {rec.counterparty && rec.cleanDescription !== rec.counterparty && (
+                                        <small style={{ fontSize: '0.72rem', color: 'var(--muted, #64748b)' }}>
+                                          {rec.cleanDescription}
+                                        </small>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <span className={`dir ${rec.direction}`}>
+                                        {rec.direction}
+                                      </span>
+                                    </td>
+                                    <td
+                                      style={{
+                                        textAlign: 'right',
+                                        fontWeight: 800,
+                                        fontSize: '0.92rem',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      <span className={`am ${rec.direction === 'debit' ? 'db' : 'cr'}`}>
+                                        {formatSignedPaise(rec.amountPaise, rec.direction)}
+                                      </span>
+                                    </td>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                      <select
+                                        className="recon-mini-select recon-type-select"
+                                        data-testid="recon-type-select"
+                                        data-k="type"
+                                        value={decision?.proposedType || rec.proposedType}
+                                        onChange={(e) =>
+                                          handleChangeClassification(rec.id, e.target.value as any)
+                                        }
+                                      >
+                                        <option value="expense">Expense</option>
+                                        <option value="income">Income</option>
+                                        <option value="transfer">Transfer</option>
+                                        <option value="refund">Refund</option>
+                                        <option value="reversal">Reversal / Failed</option>
+                                        <option value="needs_review">Needs Review</option>
+                                      </select>
+                                    </td>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                      <select
+                                        className="recon-mini-select recon-category-select"
+                                        data-testid="recon-category-select"
+                                        data-k="cat"
+                                        value={decision?.proposedCategory || rec.proposedCategory || 'Other'}
+                                        onChange={(e) => {
+                                          const cat = categories.find((c) => c.name === e.target.value)
+                                          handleChangeCategory(rec.id, e.target.value, cat?.id)
+                                        }}
+                                      >
+                                        {categories.map((c) => (
+                                          <option key={c.id} value={c.name}>
+                                            {c.name}
+                                          </option>
+                                        ))}
+                                        <option value="Other">Other</option>
+                                      </select>
+                                    </td>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        {state === 'suggested_match' ? (
+                                          <>
+                                            <button
+                                              className="recon-action-btn confirm"
+                                              onClick={() => handleConfirmMatch(rec.id)}
+                                              title="Confirm match link"
+                                            >
+                                              Confirm
+                                            </button>
+                                            <button
+                                              className="recon-action-btn reject"
+                                              onClick={() => handleRejectMatch(rec.id)}
+                                              title="Separate record"
+                                            >
+                                              Separate
+                                            </button>
+                                          </>
+                                        ) : state === 'conflicting' ? (
+                                          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
+                                            Conflict
+                                          </span>
+                                        ) : (
+                                          <>
+                                            <span className={`ok ${isModified ? 'm' : ''}`}>
+                                              <Check size={12} /> {isModified ? 'Modified · Ready' : 'Ready'}
+                                            </span>
+                                            <button
+                                              className="mod"
+                                              data-a="modify"
+                                              onClick={() => handleMarkReview(rec.id)}
+                                              title="Modify record"
+                                            >
+                                              Modify
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {isExpanded && (
+                                    <tr className="recon-expanded-row">
+                                      <td
+                                        colSpan={10}
+                                        style={{
+                                          background: 'rgba(255, 255, 255, 0.02)',
+                                          padding: '12px 18px',
+                                          fontSize: '0.78rem',
+                                          color: 'var(--muted, #94a3b8)',
+                                        }}
+                                      >
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <div>
+                                            <strong>Raw Narration:</strong> {rec.rawDescription}
+                                          </div>
+                                          {rec.balanceAfterPaise !== undefined && (
+                                            <div>
+                                              <strong>Closing Balance:</strong> {formatPaise(rec.balanceAfterPaise)}
+                                            </div>
+                                          )}
+                                          {decision?.decisionReason && (
+                                            <div>
+                                              <strong>Decision Reasoning:</strong> {decision.decisionReason}
+                                            </div>
+                                          )}
+                                          {matchedLedgerTx && (
+                                            <div style={{ color: '#6366f1' }}>
+                                              <strong>Matched Ledger Tx:</strong> "{matchedLedgerTx.description}" ({formatPaise(matchedLedgerTx.amount)}, {matchedLedgerTx.type})
+                                            </div>
+                                          )}
+                                          {decision?.conflicts && decision.conflicts.length > 0 && (
+                                            <div style={{ color: '#ef4444' }}>
+                                              <strong>Conflicts:</strong> {decision.conflicts.join(', ')}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Fragment>
+                              )
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </>
               )}
 
               {/* View 2: Proposed Import Summary Tab */}
               {activeTab === 'summary' && proposedSummary && (
-                <div className="recon-summary-panel">
-                  <div className="recon-summary-header">
+                <div className="pn recon-summary-panel">
+                  <div className="recon-summary-header" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                     <Sparkles size={20} style={{ color: 'var(--accent, #6366f1)' }} />
                     <div>
                       <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-                        In-Memory Proposed Import Summary
+                        Proposed Import Summary
                       </h3>
-                      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--muted, #94a3b8)' }}>
-                        Projected financial impact if staged draft decisions are committed in Stage 8.5.
+                      <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--muted, #94a3b8)' }}>
+                        {parserResult.records.length} new records · {parserResult.statistics.debitCount} debits totalling {formatPaise(proposedSummary.proposedExpensesPaise)} · {parserResult.statistics.creditCount} credits totalling {formatPaise(proposedSummary.proposedIncomePaise)}. Net {formatSignedPaise(Math.abs(proposedSummary.proposedIncomePaise - proposedSummary.proposedExpensesPaise), proposedSummary.proposedIncomePaise >= proposedSummary.proposedExpensesPaise ? 'credit' : 'debit')}.
                       </p>
                     </div>
                   </div>
@@ -1863,7 +2755,7 @@ export function ReconciliationModal({
 
               {/* View 3: Rejected Rows */}
               {activeTab === 'rejected' && (
-                <div className="recon-table-wrapper">
+                <div className="tw recon-table-wrapper">
                   <table className="recon-table">
                     <thead>
                       <tr>
@@ -1889,7 +2781,18 @@ export function ReconciliationModal({
 
               {/* View 4: Warnings */}
               {activeTab === 'warnings' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="pn w">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <Info size={16} />
+                      <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+                        {parserResult.warnings.length} {parserResult.warnings.length === 1 ? 'warning' : 'warnings'}
+                      </h3>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted, #94a3b8)' }}>
+                      The parser flagged {parserResult.warnings.length} {parserResult.warnings.length === 1 ? 'row' : 'rows'}. Review before importing. Nothing is written to your ledger until you confirm.
+                    </p>
+                  </div>
                   {parserResult.warnings.map((warn, idx) => (
                     <div
                       key={idx}
@@ -1918,19 +2821,19 @@ export function ReconciliationModal({
         </div>
 
         {/* Footer */}
-        <div className="recon-modal-footer">
+        <div className="mf recon-modal-footer">
           {committedBatch ? (
             <>
-              <div className="recon-footer-notice">
+              <div className="fn recon-footer-notice">
                 <ShieldCheck size={16} style={{ color: '#10b981' }} />
                 <span>
                   Batch ID: <code style={{ color: '#38bdf8' }}>{committedBatch.id}</code> · Workspace:{' '}
                   {isDemoMode ? 'Demo' : 'Live'}
                 </span>
               </div>
-              <div className="recon-footer-actions">
+              <div className="fa recon-footer-actions">
                 <button
-                  className="primary-button"
+                  className="btn p primary-button"
                   id="recon-audit-done-btn"
                   onClick={() => {
                     handleDiscard()
@@ -1944,7 +2847,7 @@ export function ReconciliationModal({
           ) : (
             <>
               <div
-                className="recon-footer-notice"
+                className="fn recon-footer-notice"
                 style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1952,7 +2855,7 @@ export function ReconciliationModal({
                     size={16}
                     style={{ color: batchEligibility?.isBatchEligible ? '#10b981' : '#f59e0b' }}
                   />
-                  <strong>
+                  <strong id="fn1">
                     {isDemoMode ? 'Demo Workspace' : 'Live Workspace'} ·{' '}
                     {parserResult
                       ? `${batchEligibility?.toCreateCount ?? 0} to import · ${
@@ -1978,16 +2881,23 @@ export function ReconciliationModal({
                   </span>
                 )}
               </div>
-              <div className="recon-footer-actions">
+              <div className="fa recon-footer-actions">
                 {parserResult && (
-                  <button className="outline-button" onClick={handleDiscard} disabled={isCommitting}>
+                  <button
+                    className="btn o outline-button"
+                    id="recon-discard-draft-btn"
+                    data-a="disc"
+                    onClick={handleDiscard}
+                    disabled={isCommitting}
+                  >
                     <RotateCcw size={14} /> Discard draft
                   </button>
                 )}
                 {parserResult && (
                   <button
-                    className="primary-button"
+                    className="btn p primary-button"
                     id="recon-commit-import-btn"
+                    data-a="commit"
                     onClick={handleCommitImport}
                     disabled={
                       isCommitting ||
@@ -2000,7 +2910,12 @@ export function ReconciliationModal({
                     {isCommitting ? 'Importing...' : 'Import approved transactions'}
                   </button>
                 )}
-                <button className="outline-button" onClick={onClose} disabled={isCommitting}>
+                <button
+                  className="btn o outline-button"
+                  data-a="close"
+                  onClick={onClose}
+                  disabled={isCommitting}
+                >
                   Close review
                 </button>
               </div>

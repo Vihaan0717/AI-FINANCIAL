@@ -213,8 +213,16 @@ function parseGenericCsv(
       },
       warnings: rowWarnings,
       errors: [],
-      proposedType: direction === 'credit' ? 'income' : 'expense',
-      proposedCategory: direction === 'credit' ? 'Income' : 'Other',
+      proposedType: (/transfer|trf|to own|self|credit card|slice/i.test(rawDesc) || (direction === 'credit' && !/salary|payroll|dividend|interest/i.test(rawDesc)))
+        ? 'transfer'
+        : direction === 'credit'
+        ? 'income'
+        : 'expense',
+      proposedCategory: (/transfer|trf|to own|self|credit card|slice/i.test(rawDesc) || (direction === 'credit' && !/salary|payroll|dividend|interest/i.test(rawDesc)))
+        ? 'Transfer'
+        : direction === 'credit'
+        ? 'Income'
+        : 'Other',
       status: 'staged',
       reviewStatus: 'pending',
       matchCandidateIds: [],

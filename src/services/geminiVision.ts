@@ -10,12 +10,14 @@ export async function extractWithGeminiVision(
 Output ONLY valid JSON with no markdown backticks, conforming to:
 {
   "docType": "payment_screenshot" or "itemized_receipt",
+  "type": "expense" or "income" or "transfer" or "refund",
+  "isInternalTransfer": boolean,
   "totalAmountRupees": 270.00,
-  "merchant": "Store or Payee name",
+  "merchant": "Store, Payee, Contact or Bank name",
   "date": "YYYY-MM-DDTHH:mm:ssZ",
   "paymentMethod": "UPI" or "Card" or "Bank transfer" or "Cash" or "Other",
   "status": "completed" or "pending" or "failed",
-  "category": "Groceries" or "Food & dining" or "Shopping" or "Home" or "Transport" or "Utilities" or "Health" or "Other",
+  "category": "Groceries" or "Food & dining" or "Shopping" or "Home" or "Transport" or "Utilities" or "Health" or "Transfer" or "Income" or "Other",
   "externalRef": "UPI UTR or Txn ID if visible",
   "description": "Short summary",
   "confidenceScore": 0.95,
@@ -27,7 +29,15 @@ Output ONLY valid JSON with no markdown backticks, conforming to:
       "suggestedInventoryCategory": "Essentials" or "Clothing" or "Home" or "Other"
     }
   ]
-}`
+}
+Strict Financial Accounting Rules:
+1. If the screenshot shows a transfer between user accounts ("Transfer to ...", "Self Transfer", "To own account"), a credit card/loan bill payment (e.g. Slice, SBI Card, HDFC Card, CRED), or a personal P2P money transfer with family/friends (e.g. "Received from Dad/Friend", "Sent to Brother"):
+   - Set "type": "transfer"
+   - Set "category": "Transfer"
+   - Set "isInternalTransfer": true (if between own accounts or paying credit card)
+   - NEVER classify inter-account transfers or moving money between accounts as Income or Expense, to prevent double counting.
+2. Only classify "type": "income" if it is explicit salary, business revenue, dividend, or interest.
+3. Refunds should have "type": "refund".`
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`

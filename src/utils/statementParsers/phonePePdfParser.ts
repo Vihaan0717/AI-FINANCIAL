@@ -343,7 +343,7 @@ export function parsePhonePePdfText(
       isRefund = true
       direction = 'credit' // Ensure refund is treated as credit
       rawCounterparty = fullDetailText.replace(/^Refund from\s+/i, '').trim()
-    } else if (/^Transfer to/i.test(fullDetailText)) {
+    } else if (/^(?:Transfer to|Transfer from|To own|Self transfer)/i.test(fullDetailText)) {
       isTransfer = true
       rawCounterparty = fullDetailText.trim()
     } else if (/^Received from/i.test(fullDetailText)) {
@@ -357,6 +357,11 @@ export function parsePhonePePdfText(
       rawCounterparty = fullDetailText
     } else {
       rawCounterparty = rawTxnId ? `PhonePe payment ${rawTxnId}` : 'PhonePe Transaction'
+    }
+
+    // Identify card repayments and internal account transfers
+    if (/slice small finance bank|slice|credit card|card payment/i.test(rawCounterparty) || /slice small finance bank|slice/i.test(fullDetailText)) {
+      isTransfer = true
     }
 
     const cleanCounterparty = cleanCounterpartyText(rawCounterparty)
@@ -399,19 +404,34 @@ export function parsePhonePePdfText(
     }
 
     // Proposed classification
+    // Strict Personal Finance Rule:
+    // Moving funds between accounts, personal UPI transfers, repayments, and refunds
+    // must NEVER be misclassified as ordinary earned income or retail expense.
     let proposedType: 'income' | 'expense' | 'transfer' | 'refund' =
       direction === 'credit' ? 'income' : 'expense'
+    let proposedCategory = direction === 'credit' ? 'Income' : 'Other'
+
+    const isExplicitIncome = /salary|payroll|dividend|interest|pension|stipend|freelance retainer|client invoice/i.test(
+      cleanCounterparty + ' ' + fullDetailText
+    )
+
     if (isRefund) {
       proposedType = 'refund'
-    } else if (isTransfer) {
-      proposedType = 'transfer'
-    }
-
-    let proposedCategory = direction === 'credit' ? 'Income' : 'Other'
-    if (isRefund) {
       proposedCategory = 'Shopping'
-    } else if (isTransfer) {
+    } else if (isTransfer || /transfer to|transfer from|slice small finance bank|credit card/i.test(cleanCounterparty + ' ' + fullDetailText)) {
+      proposedType = 'transfer'
       proposedCategory = 'Transfer'
+    } else if (direction === 'credit') {
+      if (isExplicitIncome) {
+        proposedType = 'income'
+        proposedCategory = 'Income'
+      } else {
+        // Incoming UPI credits from personal contacts (friends, family, bill splits, or own accounts)
+        // are classified as Transfer to prevent double-counting income across accounts.
+        proposedType = 'transfer'
+        proposedCategory = 'Transfer'
+        rowWarnings.push('Personal/UPI credit. Classified as Transfer to prevent false income inflation.')
+      }
     } else if (/Mobile Recharge/i.test(cleanCounterparty)) {
       proposedCategory = 'Bills & Utilities'
     } else if (/ZOMATO|SWIGGY|FOOD|RESTAURANT|DINING/i.test(cleanCounterparty)) {

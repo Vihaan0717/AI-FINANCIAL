@@ -1,0 +1,1861 @@
+/* ============================================================
+   Money Mate — iOS Liquid Glass Dashboard Design System
+   Exact Color Palette & Glassmorphic Tokens
+   ============================================================ */
+
+:root {
+  --lg-bg: #f3eefe;
+  --lg-text: #1f1a3d;
+  --lg-muted: #5b5780;
+  --lg-purple: #6d3fe0;
+  --lg-purple-light: #8b5cf6;
+  --lg-cyan: #38bdf8;
+  --lg-pink: #ff8fb1;
+  --lg-mint: #0b6b4a;
+  --lg-mint-bg: #c9f7e3;
+  --lg-coral: #a3401a;
+  --lg-coral-bg: #ffe0d0;
+  --lg-card-glass: rgba(255, 255, 255, 0.55);
+  --lg-card-border: rgba(255, 255, 255, 0.9);
+  --lg-card-shadow: 0 10px 30px rgba(120, 90, 200, 0.14);
+}
+
+/* Ambient Floating Glow Orbs */
+.liquid-ambient-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.liquid-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.liquid-orb-1 {
+  width: 320px;
+  height: 320px;
+  background: #ffc2dd;
+  filter: blur(65px);
+  top: -90px;
+  right: -90px;
+}
+
+.liquid-orb-2 {
+  width: 320px;
+  height: 320px;
+  background: #b9dcff;
+  filter: blur(65px);
+  top: 300px;
+  left: -130px;
+}
+
+.liquid-orb-3 {
+  width: 290px;
+  height: 290px;
+  background: #bff5e4;
+  filter: blur(65px);
+  bottom: -60px;
+  right: -80px;
+}
+
+.liquid-orb-4 {
+  width: 220px;
+  height: 220px;
+  background: #ffddb8;
+  filter: blur(65px);
+  top: 560px;
+  right: 40px;
+}
+
+/* Clean full-bleed centering on liquid-page-root */
+.liquid-page-root {
+  position: relative;
+  min-height: 100vh;
+  background: #f3eefe;
+  color: #1f1a3d;
+  font-family: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+  overflow-x: hidden;
+  display: block !important;
+}
+
+.liquid-page-root .topbar {
+  display: none !important;
+}
+
+.liquid-page-root .sidebar {
+  display: none !important;
+}
+
+.liquid-page-root main {
+  grid-column: 1 / -1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.liquid-page-root .content {
+  padding: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+/* View wrappers & Responsive Layout Grid */
+.liquid-dashboard-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 32px 18px 120px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 1;
+}
+
+.liquid-view-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 24px 18px 120px;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+/* Mobile (<= 899px): 100% exact mobile look, width, and order */
+@media (max-width: 899px) {
+  .liquid-dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .liquid-dashboard-col-left,
+  .liquid-dashboard-col-right {
+    display: contents;
+  }
+
+  /* Exact mobile order preservation */
+  .liquid-hero-card { order: 1; }
+  .liquid-actions-grid { order: 2; }
+  .liquid-trend-card { order: 3; }
+  .liquid-budget-card { order: 4; }
+  .liquid-ai-card { order: 5; }
+  .liquid-dues-grid { order: 6; }
+  .liquid-recent-card { order: 7; }
+
+  .budget-main-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* Desktop / Laptop / Systems view (>= 900px): Expands to full screen width */
+@media (min-width: 900px) {
+  .liquid-dashboard-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 36px 36px 120px;
+  }
+
+  .liquid-view-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 36px 36px 120px;
+  }
+
+  .liquid-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+  }
+
+  .liquid-dashboard-col-left,
+  .liquid-dashboard-col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .budget-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .liquid-bottom-nav {
+    width: 480px;
+    bottom: 26px;
+  }
+}
+
+.liquid-subpage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.liquid-subpage-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.liquid-subpage-title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0;
+  color: #1f1a3d;
+}
+
+/* Generic Liquid Glass Card */
+.liquid-card {
+  padding: 16px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  box-shadow: 0 10px 30px rgba(120, 90, 200, 0.14);
+  box-sizing: border-box;
+}
+
+/* Header Area */
+.liquid-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.liquid-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #ff8fb1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+.liquid-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.liquid-greeting {
+  font-size: 13px;
+  color: #5b5780;
+  font-weight: 500;
+}
+
+.liquid-username {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #1f1a3d;
+  line-height: 1.2;
+}
+
+.liquid-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.liquid-ai-round-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #6d3fe0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(120, 90, 200, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.liquid-ai-round-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 22px rgba(120, 90, 200, 0.26);
+}
+
+.liquid-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(120, 90, 200, 0.1);
+  transition: transform 0.15s ease;
+}
+
+.liquid-mode-pill:hover {
+  transform: translateY(-1px);
+}
+
+.liquid-mode-pill.real {
+  color: #0b6b4a;
+}
+
+.liquid-mode-pill.demo {
+  color: #a3401a;
+}
+
+/* Hero Estimated Spendable Card */
+.liquid-hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  padding: 22px 20px 18px;
+  min-height: 236px;
+  box-sizing: border-box;
+  color: #ffffff;
+  background: linear-gradient(145deg, #4f46e5 0%, #7c3aed 55%, #c026d3 100%);
+  box-shadow: 0 18px 40px rgba(110, 70, 220, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.liquid-hero-waves {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 90px;
+  pointer-events: none;
+}
+
+.liquid-hero-top {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.liquid-hero-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.liquid-hero-badge {
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #4a2bb8;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.liquid-hero-amount {
+  position: relative;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  margin-top: 4px;
+  line-height: 1.1;
+  color: #ffffff;
+  z-index: 2;
+}
+
+.liquid-hero-sub {
+  position: relative;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 2px;
+  z-index: 2;
+}
+
+.liquid-hero-pill-row {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  z-index: 2;
+}
+
+.liquid-hero-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f1a3d;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.liquid-hero-pill-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.liquid-hero-pill-icon.income {
+  background: #c9f7e3;
+  color: #0b6b4a;
+}
+
+.liquid-hero-pill-icon.expense {
+  background: #ffe0d0;
+  color: #a3401a;
+}
+
+.liquid-hero-pill-label {
+  font-size: 11px;
+  color: #5b5780;
+  font-weight: 500;
+}
+
+.liquid-hero-pill-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f1a3d;
+  line-height: 1.15;
+}
+
+/* 4 Action Buttons Grid */
+.liquid-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.liquid-action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 74px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 4px;
+  box-shadow: 0 6px 16px rgba(120, 90, 200, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.liquid-action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(120, 90, 200, 0.2);
+}
+
+.liquid-action-button:active {
+  transform: translateY(0);
+}
+
+.liquid-action-button.scan {
+  background: #ffe4ec;
+  color: #c2185b;
+}
+
+.liquid-action-button.import {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.liquid-action-button.export {
+  background: #d5f7ea;
+  color: #047857;
+}
+
+.liquid-action-button.add {
+  background: #ede4ff;
+  color: #6d28d9;
+}
+
+/* Spending Trend Card */
+.liquid-trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.liquid-trend-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f1a3d;
+}
+
+.liquid-trend-sub {
+  font-size: 12px;
+  color: #5b5780;
+  margin-top: 2px;
+}
+
+.liquid-trend-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f1a3d;
+  text-align: right;
+}
+
+.liquid-trend-metric {
+  font-size: 11px;
+  color: #0b6b4a;
+  font-weight: 600;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.liquid-trend-days {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #5b5780;
+  padding: 4px 6px 0;
+}
+
+.liquid-trend-day {
+  font-weight: 500;
+}
+
+.liquid-trend-day.active {
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+/* Budget Health Card */
+.liquid-budget-rings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.liquid-budget-ring-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.liquid-budget-ring-item:hover {
+  transform: translateY(-2px);
+}
+
+.liquid-ring-box {
+  position: relative;
+  width: 76px;
+  height: 76px;
+}
+
+.liquid-ring-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f1a3d;
+}
+
+.liquid-ring-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: #1f1a3d;
+}
+
+/* Money Mate AI Card */
+.liquid-ai-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, rgba(196, 181, 253, 0.7), rgba(186, 230, 253, 0.7));
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  box-shadow: 0 10px 30px rgba(120, 90, 200, 0.14);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.liquid-ai-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(120, 90, 200, 0.22);
+}
+
+.liquid-ai-icon-box {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #6d3fe0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(109, 63, 224, 0.2);
+}
+
+.liquid-ai-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f1a3d;
+}
+
+.liquid-ai-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 3px;
+  color: #1f1a3d;
+}
+
+/* Upcoming Dues Grid */
+.liquid-dues-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.liquid-due-card {
+  padding: 14px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(120, 90, 200, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.liquid-due-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(120, 90, 200, 0.18);
+}
+
+.liquid-due-card.orange {
+  background: linear-gradient(135deg, #ffe8d6, #ffd1e3);
+}
+
+.liquid-due-card.teal {
+  background: linear-gradient(135deg, #d4f5ea, #d3e6ff);
+}
+
+.liquid-due-day {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b5780;
+  text-transform: uppercase;
+}
+
+.liquid-due-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 6px;
+  color: #1f1a3d;
+}
+
+.liquid-due-when {
+  font-size: 12px;
+  color: #5b5780;
+  margin-top: 1px;
+}
+
+.liquid-due-amt {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 6px;
+  color: #1f1a3d;
+}
+
+/* Recent Activity Liquid Card */
+.liquid-recent-card {
+  padding: 18px 20px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: 0 10px 30px rgba(120, 90, 200, 0.14);
+}
+
+.liquid-recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.liquid-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6d3fe0;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: opacity 0.2s ease;
+}
+
+.liquid-link-btn:hover {
+  opacity: 0.8;
+}
+
+/* iOS Glass Transaction Rows in Liquid Cards & Transactions Page */
+.liquid-page-root .transaction-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.liquid-page-root .transaction-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 0 !important;
+  min-height: 52px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
+  grid-template-columns: none !important;
+  transition: background-color 0.15s ease;
+}
+
+.liquid-page-root .transaction-row:last-child {
+  border-bottom: none !important;
+}
+
+.liquid-page-root .transaction-icon {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  place-items: center !important;
+  flex-shrink: 0 !important;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.liquid-page-root .transaction-name {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.liquid-page-root .transaction-title {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: #1f1a3d !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  letter-spacing: -0.01em !important;
+}
+
+.liquid-page-root .transaction-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 450;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liquid-page-root .dot-sep {
+  opacity: 0.6;
+}
+
+.liquid-page-root .transaction-date-text {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.liquid-page-root .transaction-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.liquid-page-root .transaction-amount {
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" !important;
+  letter-spacing: -0.01em !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.liquid-page-root .transaction-amount.income {
+  color: #0b6b4a !important;
+}
+
+.liquid-page-root .transaction-amount.expense {
+  color: #1f1a3d !important;
+}
+
+.liquid-page-root .transaction-amount.refund {
+  color: #6d3fe0 !important;
+}
+
+.liquid-page-root .transaction-amount.transfer {
+  color: #2563eb !important;
+}
+
+.liquid-page-root .transaction-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.liquid-page-root .action-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: none !important;
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #64748b !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.liquid-page-root .action-btn:hover {
+  background: rgba(109, 63, 224, 0.15) !important;
+  color: #6d3fe0 !important;
+  transform: scale(1.05);
+}
+
+.liquid-page-root .action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}
+
+/* Liquid Bottom Floating Navigation Bar */
+.liquid-bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 22px;
+  width: min(calc(100% - 32px), 430px);
+  height: 68px;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.22));
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  box-shadow: 0 14px 34px rgba(100, 70, 190, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.liquid-goo-layer {
+  position: absolute;
+  inset: 0;
+  filter: url(#goo);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.liquid-goo-indicator {
+  position: absolute;
+  top: 7px;
+  width: 64px;
+  height: 54px;
+  border-radius: 27px;
+}
+
+.liquid-goo-indicator.blob-a {
+  background: linear-gradient(135deg, #8b5cf6, #38bdf8);
+  transition: left 0.32s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.liquid-goo-indicator.blob-b {
+  background: linear-gradient(135deg, #c084fc, #f472b6);
+  transition: left 0.7s cubic-bezier(0.25, 0.8, 0.3, 1);
+  transition-delay: 0.04s;
+}
+
+.liquid-nav-grid {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  padding: 0 6px;
+}
+
+.liquid-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  height: 54px;
+  border: 0;
+  background: transparent;
+  font-size: 10px;
+  transition: color 0.3s ease;
+  cursor: pointer;
+}
+
+.liquid-nav-btn.active {
+  color: #3b1a8f;
+  font-weight: 700;
+}
+
+.liquid-nav-btn:not(.active) {
+  color: #4b4670;
+  font-weight: 600;
+}
+
+/* Quick View Drawer / Menu for all sections */
+.liquid-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 26, 61, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 24px;
+}
+
+.liquid-drawer-sheet {
+  width: min(calc(100% - 28px), 460px);
+  background: radial-gradient(135% 135% at 5% 0%, rgba(255, 255, 255, 0.98) 0%, rgba(245, 240, 255, 0.94) 40%, rgba(238, 246, 255, 0.95) 75%, rgba(255, 242, 250, 0.92) 100%);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 32px;
+  box-shadow: 0 30px 80px -15px rgba(99, 102, 241, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 2px 3px rgba(255, 255, 255, 1);
+  padding: 24px;
+  box-sizing: border-box;
+  animation: liquidDrawerSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes liquidDrawerSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.liquid-drawer-sheet::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.liquid-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.liquid-drawer-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 250, 255, 0.65) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1e1b4b;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 15px -2px rgba(100, 70, 190, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.liquid-drawer-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, transparent 100%);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  pointer-events: none;
+}
+
+.liquid-drawer-item:hover {
+  transform: translateY(-5px) scale(1.04);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(242, 238, 255, 0.92) 100%);
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 16px 32px -6px rgba(109, 40, 217, 0.22), inset 0 1px 3px #ffffff;
+  color: #6d28d9;
+}
+
+.liquid-drawer-item svg {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease, color 0.25s ease;
+  color: #6d28d9;
+}
+
+.liquid-drawer-item:hover svg {
+  transform: scale(1.18) rotate(-4deg);
+  filter: drop-shadow(0 4px 10px rgba(139, 92, 246, 0.45));
+}
+
+.liquid-drawer-item.active {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2) 0%, rgba(59, 130, 246, 0.16) 100%);
+  border-color: #8b5cf6;
+  box-shadow: 0 8px 25px -4px rgba(124, 58, 237, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  color: #6d28d9;
+}
+
+/* Subpages Liquid Glass Adaptations */
+.liquid-page-root .panel,
+.liquid-page-root .summary-card:not(.balance),
+.liquid-page-root .inventory-stats article,
+.liquid-page-root .collection,
+.liquid-page-root .shopping-list,
+.liquid-page-root .calendar,
+.liquid-page-root .agenda,
+.liquid-page-root .conversation,
+.liquid-page-root .chat aside,
+.liquid-page-root .settings,
+.liquid-page-root .goal,
+.liquid-page-root .bars,
+.liquid-page-root .sip {
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 0 10px 30px rgba(120, 90, 200, 0.1) !important;
+  color: #1f1a3d !important;
+}
+
+.liquid-page-root .table-head {
+  color: #5b5780 !important;
+}
+
+.liquid-page-root .transaction-row {
+  border-bottom: 1px solid rgba(120, 90, 200, 0.1) !important;
+}
+
+.liquid-page-root .toolbox {
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+.liquid-page-root .toolbox input {
+  color: #1f1a3d !important;
+}
+
+/* ============================================================
+   Budgets & Savings — Animated Liquid Glass Styles
+   ============================================================ */
+
+@keyframes liquidWaveFlow {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes liveDotPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+}
+
+.budget-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: page 0.25s ease both;
+}
+
+/* Hero Goal Card */
+.budget-hero-goal {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(240, 235, 255, 0.65));
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: 0 14px 40px rgba(110, 80, 200, 0.14);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.budget-hero-goal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 48px rgba(110, 80, 200, 0.18);
+}
+
+.budget-hero-wave-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  width: 200%;
+  pointer-events: none;
+  opacity: 0.22;
+  animation: liquidWaveFlow 14s ease-in-out infinite alternate;
+}
+
+.budget-hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.budget-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.budget-goal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: #6d3fe0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.budget-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #065f46;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.budget-live-indicator .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: liveDotPulse 2s infinite ease-in-out;
+}
+
+.budget-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.budget-stat-box {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 18px;
+  padding: 12px 14px;
+  backdrop-filter: blur(12px);
+}
+
+.budget-stat-label {
+  font-size: 11px;
+  font-weight: 550;
+  color: #64748b;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.budget-stat-value {
+  font-size: 20px;
+  font-weight: 650;
+  color: #1f1a3d;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.budget-stat-value.highlight {
+  color: #6d3fe0;
+}
+
+.budget-stat-value.mint {
+  color: #0b6b4a;
+}
+
+/* Fluid Liquid Progress Bar with Ripple */
+.budget-progress-track {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.budget-progress-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #8b5cf6, #c026d3);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.5);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.budget-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: liquidWaveFlow 3s infinite linear;
+}
+
+/* Wave presentation panel */
+.budget-wave-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: 0 12px 36px rgba(120, 90, 200, 0.12);
+}
+
+.budget-wave-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.budget-wave-title h2 {
+  font-size: 18px;
+  font-weight: 650;
+  color: #1f1a3d;
+  letter-spacing: -0.02em;
+  margin: 0 0 2px;
+}
+
+.budget-wave-title p {
+  font-size: 12px;
+  color: #5b5780;
+  margin: 0;
+}
+
+.budget-wave-toggle-group {
+  display: flex;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 3px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.budget-wave-toggle-btn {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: #5b5780;
+  transition: all 0.2s ease;
+}
+
+.budget-wave-toggle-btn.active {
+  background: #ffffff;
+  color: #6d3fe0;
+  box-shadow: 0 2px 8px rgba(109, 63, 224, 0.18);
+}
+
+.budget-wave-chart-container {
+  width: 100%;
+  height: 220px;
+  margin: 8px 0 12px;
+  position: relative;
+}
+
+/* Category cards list */
+.budget-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.budget-category-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 6px 20px rgba(120, 90, 200, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.budget-category-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(120, 90, 200, 0.16);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.budget-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.budget-cat-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.budget-cat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.budget-cat-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f1a3d;
+}
+
+.budget-cat-count {
+  font-size: 11px;
+  color: #5b5780;
+}
+
+.budget-cat-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.budget-cat-badge.safe {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+}
+
+.budget-cat-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #92400e;
+}
+
+.budget-cat-badge.exceeded {
+  background: rgba(239, 68, 68, 0.15);
+  color: #991b1b;
+}
+
+.budget-cat-bar-wrap {
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+
+.budget-cat-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.budget-cat-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #5b5780;
+}
+
+.budget-cat-footer strong {
+  color: #1f1a3d;
+  font-weight: 700;
+}
+
+/* SIP / Investment scheduled card */
+.budget-sip-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 22px;
+  background: linear-gradient(135deg, rgba(237, 244, 255, 0.7), rgba(255, 255, 255, 0.65));
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: 0 12px 36px rgba(120, 90, 200, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.budget-sip-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.budget-sip-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.budget-sip-amount {
+  font-size: 26px;
+  font-weight: 650;
+  color: #1f1a3d;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  margin: 8px 0 2px;
+}
+
+.budget-sip-desc {
+  font-size: 12px;
+  color: #5b5780;
+  margin: 0 0 16px;
+}
+
+/* ==========================================================================
+   Interactive Spending Wave Trend Styles
+   ========================================================================== */
+.liquid-wave-interactive-wrap {
+  position: relative;
+  width: 100%;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+}
+
+.liquid-wave-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 12px;
+  padding: 4px 10px;
+  box-shadow: 0 8px 24px -4px rgba(109, 40, 217, 0.25), inset 0 1px 2px #fff;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  z-index: 20;
+  animation: liquidTooltipPop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+}
+
+@keyframes liquidTooltipPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -85%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+.liquid-wave-tooltip-amount {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e1b4b;
+  letter-spacing: -0.01em;
+}
+
+.liquid-wave-tooltip-date {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #7c3aed;
+}
+
+.liquid-trend-day {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.liquid-trend-day:hover {
+  transform: translateY(-2px);
+  color: #7c3aed;
+}
+
+.liquid-trend-day.active {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   Lucid Liquid Glass Budget Health Rings
+   ========================================================================== */
+.liquid-ring-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  box-shadow: 0 10px 24px -4px rgba(139, 92, 246, 0.18), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+.liquid-budget-ring-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+
+.liquid-budget-ring-item:hover {
+  transform: translateY(-4px);
+}
+
+.liquid-budget-ring-item:hover .liquid-ring-box {
+  transform: scale(1.08);
+  box-shadow: 0 16px 32px -4px rgba(139, 92, 246, 0.32), inset 0 2px 4px #ffffff;
+}
+
+.liquid-ring-val {
+  position: absolute;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1e1b4b;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  letter-spacing: -0.02em;
+}
+
+.liquid-ring-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #332d56;
+}
+
+/* ==========================================================================
+   Lucid Liquid Glass Dialog & Modal Theme (For Categories & Settings)
+   ========================================================================== */
+.liquid-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 25, 60, 0.38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  animation: liquidBackdropFade 0.25s ease-out;
+}
+
+@keyframes liquidBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.liquid-modal-sheet {
+  width: min(calc(100% - 24px), 640px);
+  max-height: 88vh;
+  background: radial-gradient(135% 135% at 5% 0%, rgba(255, 255, 255, 0.98) 0%, rgba(246, 244, 255, 0.94) 45%, rgba(238, 246, 255, 0.95) 100%);
+  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px -10px rgba(109, 40, 217, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 2px 3px #ffffff;
+  padding: 24px;
+  box-sizing: border-box;
+  color: #1e1b4b;
+  display: flex;
+  flex-direction: column;
+  animation: liquidModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes liquidModalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.liquid-category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px -2px rgba(100, 70, 190, 0.06), inset 0 1px 2px #fff;
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.liquid-category-row:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 10px 24px -4px rgba(109, 40, 217, 0.15), inset 0 1px 2px #fff;
+}
+
+.liquid-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 14px;
+  color: #1e1b4b;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.liquid-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+  background: #ffffff;
+}
+
+.liquid-pill-tab {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.5);
+  color: #5b5780;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.liquid-pill-tab:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e1b4b;
+}
+
+.liquid-pill-tab.active {
+  background: #ffffff;
+  color: #6d28d9;
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.15);
+}
+
+/* ==========================================================================
+   Anchored Transactions Table & Grid Alignment
+   ========================================================================== */
+.liquid-tx-container {
+  padding-bottom: 120px !important; /* Prevents floating dock nav overlap */
+}
+
+.liquid-tx-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.8fr) 130px 140px 84px;
+  gap: 14px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.liquid-tx-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+  color: #6d6796;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.liquid-tx-row {
+  min-height: 64px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(220, 215, 245, 0.6);
+  background: rgba(255, 255, 255, 0.45);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 12px;
+  margin-bottom: 2px;
+}
+
+.liquid-tx-row:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(4px);
+  box-shadow: 0 6px 20px -4px rgba(109, 40, 217, 0.1);
+}
+
+.liquid-tx-col-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.liquid-tx-col-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #3b3561;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.liquid-tx-col-date small {
+  color: #7c77a3;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.liquid-tx-col-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.liquid-tx-col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .liquid-tx-grid {
+    grid-template-columns: minmax(140px, 1fr) auto auto;
+    gap: 10px;
+  }
+  .liquid-tx-col-date {
+    display: none; /* Hide separate date column on narrow screens and show date inside subline */
+  }
+}
+
+
+

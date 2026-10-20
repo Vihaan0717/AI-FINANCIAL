@@ -28,6 +28,8 @@ export interface Transaction {
   source?: TransactionSource
   linkedTransactionId?: string // e.g. for refund linking to an original expense
   externalRef?: string // Bank UTR or UPI reference ID
+  importBatchId?: string // Provenance linking to the ImportBatch that created this record
+  sourceRowId?: string // Staged statement record ID or original row reference
   isDemo?: boolean
 }
 
@@ -66,6 +68,7 @@ export interface FinancialSummary {
   netCashFlow: number // paise (income - net expenses)
   totalTransfers: number // paise (strictly excluded from income/expense)
   totalRefunds: number // paise
+  unabsorbedRefundsPaise?: number // paise (refunds exceeding gross expenses in period)
   totalPendingIncome: number // paise
   totalPendingExpenses: number // paise
   failedCount: number

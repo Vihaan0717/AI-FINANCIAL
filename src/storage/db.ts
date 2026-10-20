@@ -1,5 +1,5 @@
 const DB_NAME = 'MoneyMateDB'
-const DB_VERSION = 4
+const DB_VERSION = 6
 
 const STORES = {
   TRANSACTIONS: 'transactions',
@@ -11,6 +11,8 @@ const STORES = {
   PLANNER_TASKS: 'planner_tasks',
   DISMISSED_ALERTS: 'dismissed_alerts',
   CATEGORIES: 'categories',
+  IMPORT_BATCHES: 'import_batches',
+  ACCOUNT_MAPPINGS: 'account_mappings',
 } as const
 
 export const STORE_NAME = STORES.TRANSACTIONS
@@ -22,6 +24,8 @@ export const BILLS_STORE_NAME = STORES.BILL_INSTANCES
 export const TASKS_STORE_NAME = STORES.PLANNER_TASKS
 export const DISMISSED_ALERTS_STORE_NAME = STORES.DISMISSED_ALERTS
 export const CATEGORIES_STORE_NAME = STORES.CATEGORIES
+export const IMPORT_BATCHES_STORE_NAME = STORES.IMPORT_BATCHES
+export const ACCOUNT_MAPPINGS_STORE_NAME = STORES.ACCOUNT_MAPPINGS
 
 /**
  * Opens or initializes the MoneyMateDB IndexedDB database.
@@ -111,6 +115,23 @@ export function openDatabase(): Promise<IDBDatabase> {
         catStore.createIndex('name', 'name', { unique: false })
         catStore.createIndex('isArchived', 'isArchived', { unique: false })
         catStore.createIndex('isDemo', 'isDemo', { unique: false })
+      }
+
+      // 10. Import Batches store (Version 5)
+      if (!db.objectStoreNames.contains(STORES.IMPORT_BATCHES)) {
+        const batchStore = db.createObjectStore(STORES.IMPORT_BATCHES, { keyPath: 'id' })
+        batchStore.createIndex('idempotencyKey', 'idempotencyKey', { unique: false })
+        batchStore.createIndex('sourceAccountId', 'sourceAccountId', { unique: false })
+        batchStore.createIndex('sourceProvider', 'sourceProvider', { unique: false })
+        batchStore.createIndex('isDemo', 'isDemo', { unique: false })
+        batchStore.createIndex('createdAt', 'createdAt', { unique: false })
+      }
+
+      // 11. Account Mappings store (Version 6)
+      if (!db.objectStoreNames.contains(STORES.ACCOUNT_MAPPINGS)) {
+        const mappingStore = db.createObjectStore(STORES.ACCOUNT_MAPPINGS, { keyPath: ['workspace', 'maskedAccountId'] })
+        mappingStore.createIndex('workspace', 'workspace', { unique: false })
+        mappingStore.createIndex('maskedAccountId', 'maskedAccountId', { unique: false })
       }
     }
 

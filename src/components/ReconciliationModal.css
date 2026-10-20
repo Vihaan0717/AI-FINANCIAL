@@ -1,0 +1,834 @@
+/* ReconciliationModal.css — Money Mate AI Read-Only Statement Preview */
+
+.recon-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: reconFadeIn 0.15s ease-out;
+}
+
+@keyframes reconFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.recon-modal-container {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  color: var(--text, #f8fafc);
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.recon-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recon-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recon-header-title h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.recon-scope-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recon-scope-badge.live {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.recon-scope-badge.demo {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.recon-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+/* Source & Account Controls */
+.recon-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .recon-controls-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.recon-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recon-control-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #94a3b8);
+}
+
+.recon-select {
+  background: var(--bg, #0f172a);
+  border: 1px solid var(--border, #334155);
+  color: var(--text, #f8fafc);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.recon-select:focus {
+  border-color: var(--accent, #6366f1);
+}
+
+/* Dropzone */
+.recon-dropzone {
+  border: 2px dashed var(--border, #334155);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.recon-dropzone.dragging {
+  border-color: var(--accent, #6366f1);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.recon-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.recon-dropzone h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.recon-dropzone p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted, #94a3b8);
+}
+
+/* File Loaded Pill */
+.recon-file-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg, #0f172a);
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.recon-file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recon-file-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.recon-file-size {
+  font-size: 0.75rem;
+  color: var(--muted, #94a3b8);
+}
+
+/* Format Warning / Info Banner */
+.recon-format-banner {
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.recon-format-banner.provisional {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.recon-format-banner.missing {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.recon-format-banner.verified {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+/* Stats Cards Grid */
+.recon-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.recon-stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border, var(--line, #334155));
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recon-stat-label {
+  font-size: 0.72rem;
+  color: var(--muted, #94a3b8);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recon-stat-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.recon-stat-value.debit {
+  color: #f87171;
+}
+
+.recon-stat-value.credit {
+  color: #34d399;
+}
+
+.recon-stat-value.error {
+  color: #ef4444;
+}
+
+/* Tabs Bar */
+.recon-tabs-bar {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border, #334155);
+  padding-bottom: 8px;
+}
+
+.recon-tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted, #94a3b8);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recon-tab-btn.active {
+  background: var(--accent, #6366f1);
+  color: #ffffff;
+}
+
+/* Preview Table */
+.recon-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border, var(--line, #334155));
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.recon-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.recon-table th {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--muted, #94a3b8);
+  border-bottom: 1px solid var(--border, var(--line, #334155));
+  white-space: nowrap;
+}
+
+.recon-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.recon-table tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Direction Badge */
+.recon-dir-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recon-dir-badge.debit {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.recon-dir-badge.credit {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+/* Match & Decision Status Badges */
+.recon-match-badge,
+.recon-decision-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.recon-decision-badge.suggested {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.recon-decision-badge.confirmed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.recon-decision-badge.rejected {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.recon-decision-badge.conflicting {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.recon-decision-badge.needs_review {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.recon-decision-badge.unmatched {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted, #94a3b8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.recon-match-badge.new {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.recon-match-badge.duplicate {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.recon-match-badge.probable {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.recon-match-badge.enrichment {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.recon-match-badge.transfer {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+/* Mini Dropdowns */
+.recon-mini-select {
+  background: var(--bg, #0f172a);
+  border: 1px solid var(--border, #334155);
+  color: var(--text, #f8fafc);
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.73rem;
+  outline: none;
+  cursor: pointer;
+  max-width: 130px;
+}
+
+.recon-mini-select:focus {
+  border-color: var(--accent, #6366f1);
+}
+
+/* Row Action Buttons */
+.recon-action-btn {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.recon-action-btn.confirm {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.recon-action-btn.confirm:hover {
+  background: rgba(16, 185, 129, 0.28);
+}
+
+.recon-action-btn.reject {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.recon-action-btn.reject:hover {
+  background: rgba(99, 102, 241, 0.28);
+}
+
+.recon-action-btn.review {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.recon-action-btn.review:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+.recon-action-btn.reset {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted, #94a3b8);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.recon-action-btn.reset:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text, #f8fafc);
+}
+
+/* Summary Panel */
+.recon-summary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recon-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recon-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.recon-summary-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border, var(--line, #334155));
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recon-summary-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.recon-summary-totals {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border, var(--line, #334155));
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.recon-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  color: var(--text, #f8fafc);
+  font-weight: 500;
+}
+
+.recon-summary-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Modal Footer */
+.recon-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.recon-footer-notice {
+  font-size: 0.78rem;
+  color: var(--muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.recon-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .recon-modal-backdrop {
+    padding: 8px;
+  }
+
+  .recon-modal-container {
+    max-height: 96vh;
+    border-radius: 12px;
+  }
+
+  .recon-modal-header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  .recon-header-title {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .recon-header-title h2 {
+    font-size: 0.98rem;
+  }
+
+  .recon-modal-body {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  .recon-modal-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .recon-footer-notice {
+    font-size: 0.72rem;
+  }
+
+  .recon-footer-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================================================
+   Stage 8.5: Audit Report & Rollback Styles
+   ========================================================================= */
+
+.recon-audit-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.recon-audit-header-card {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recon-audit-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recon-audit-header-title h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.recon-audit-header-meta {
+  font-size: 0.8rem;
+  color: var(--muted, #94a3b8);
+}
+
+.recon-audit-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.recon-audit-metric-card {
+  background: var(--bg, #0f172a);
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recon-audit-metric-card .label {
+  font-size: 0.75rem;
+  color: var(--muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.recon-audit-metric-card .value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text, #f8fafc);
+}
+
+.recon-balance-card {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recon-balance-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text, #f8fafc);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recon-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.recon-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.recon-balance-row .title {
+  color: var(--muted, #94a3b8);
+}
+
+.recon-balance-row .num {
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.recon-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.recon-status-badge.conclusive {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.recon-status-badge.inconclusive {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.recon-rollback-box {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recon-rollback-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recon-rollback-info strong {
+  color: #f87171;
+  font-size: 0.9rem;
+}
+
+.recon-rollback-info span {
+  font-size: 0.78rem;
+  color: var(--muted, #94a3b8);
+}
+
+.recon-precommit-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+}
+
+.danger-button {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.danger-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -19,6 +19,7 @@ import {
   Database,
   Download,
   Edit2,
+  FileSpreadsheet,
   Gift,
   HeartPulse,
   House,
@@ -90,6 +91,7 @@ import { useFinancialInsights } from './hooks/useFinancialInsights'
 import { FinancialInsightsView } from './components/FinancialInsightsView'
 import { BackupModal } from './components/BackupModal'
 import { CategoryManagementModal } from './components/CategoryManagementModal'
+import { ReconciliationModal } from './components/ReconciliationModal'
 import { useCategories } from './hooks/useCategories'
 import { getLucideCategoryIcon } from './utils/categoryIcons'
 import type { Category } from './types/category'
@@ -385,6 +387,7 @@ function App() {
 
   const [settlingBill, setSettlingBill] = useState<BillInstance | null>(null)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
+  const [isReconciliationModalOpen, setIsReconciliationModalOpen] = useState(false)
 
   const handleRestoreComplete = async (result: RestoreResult) => {
     await refreshTransactions()
@@ -1078,6 +1081,14 @@ function App() {
               <button className="outline-button" onClick={() => setIsReceiptModalOpen(true)}>
                 <Upload size={15} />
                 Scan receipt
+              </button>
+              <button
+                id="tx-import-statement-btn"
+                className="outline-button"
+                onClick={() => setIsReconciliationModalOpen(true)}
+              >
+                <FileSpreadsheet size={15} />
+                Import statement
               </button>
               <button className="outline-button" onClick={handleExportCsv}>
                 <Download size={15} />
@@ -2976,6 +2987,17 @@ function App() {
         isCategoryInUse={isCategoryInUse}
         notify={notify}
         currentScope={isDemoMode ? 'demo' : 'live'}
+      />
+
+      {/* Stage 8.3 & 8.4: Statement Import & Interactive Reconciliation Modal */}
+      <ReconciliationModal
+        isOpen={isReconciliationModalOpen}
+        onClose={() => setIsReconciliationModalOpen(false)}
+        isDemoMode={isDemoMode}
+        existingTransactions={transactions}
+        categories={categoryHook.categories}
+        notify={notify}
+        onCommitSuccess={refreshTransactions}
       />
 
       {/* Toast Notification */}

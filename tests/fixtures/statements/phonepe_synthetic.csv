@@ -1,0 +1,6 @@
+Date,Transaction ID,Payment To,Type,Amount,Status
+19/10/2026,529381729102,Swiggy,DEBIT,350.00,Completed
+19/10/2026,529381999888,Zomato India,DEBIT,420.50,Completed
+18/10/2026,529381333444,Failed Uber Ride,DEBIT,250.00,Failed
+17/10/2026,529381112233,Chai Point Indiranagar,DEBIT,20.00,Completed
+17/10/2026,529381445566,Amrit Tulsi Chai,DEBIT,20.00,Completed

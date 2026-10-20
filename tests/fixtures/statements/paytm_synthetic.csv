@@ -1,0 +1,4 @@
+Date,Time,Transaction Details,Order ID,Activity,Amount,Status
+19/10/2026,14:20:00,Paid to BigBasket Bangalore,ORDER_BB_48192,Paid,1850.00,SUCCESS
+18/10/2026,11:00:00,Cashback from Indian Oil,CB_IOCL_11029,Cashback,50.00,SUCCESS
+17/10/2026,09:15:00,Paid to Metro Rail Corporation,ORDER_METRO_091,Paid,45.00,SUCCESS

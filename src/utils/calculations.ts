@@ -74,6 +74,13 @@ export function calculateFinancialSummary(
         break
 
       case 'expense':
+        // Guard against double-counting: If an expense transaction is linked to another existing
+        // expense transaction in the same dataset (e.g. an enriched UPI observation referencing an underlying bank debit),
+        // we count the primary transaction and do not inflate gross expenses.
+        if (t.linkedTransactionId && expenseById.has(t.linkedTransactionId)) {
+          break
+        }
+
         grossConfirmedExpenses = addPaise(grossConfirmedExpenses, t.amount)
         
         // Category tracking
@@ -121,11 +128,20 @@ export function calculateFinancialSummary(
     }
   }
 
-  // Net confirmed expenses after all completed refunds
+  // Excess/unabsorbed refunds: when refunds exceed recorded expenses in this period
+  const unabsorbedRefundsPaise = totalRefunds > grossConfirmedExpenses
+    ? subtractPaise(totalRefunds, grossConfirmedExpenses)
+    : 0
+
+  // Net confirmed expenses after all completed refunds (display metric, non-negative)
   const totalConfirmedExpenses = Math.max(0, subtractPaise(grossConfirmedExpenses, totalRefunds))
 
-  // Net cash flow = confirmed income - net confirmed expenses
-  const netCashFlow = subtractPaise(totalConfirmedIncome, totalConfirmedExpenses)
+  // Net cash flow = confirmed income + total refunds - gross confirmed expenses
+  // Accurately reflects true net cash position even when refunds exceed period expenses
+  const netCashFlow = subtractPaise(
+    addPaise(totalConfirmedIncome, totalRefunds),
+    grossConfirmedExpenses
+  )
 
   // Estimated spendable = net cash flow minus upcoming commitments
   const estimatedSpendable = Math.max(0, subtractPaise(netCashFlow, plannedCommitmentsPaise))
@@ -171,6 +187,7 @@ export function calculateFinancialSummary(
     netCashFlow,
     totalTransfers,
     totalRefunds,
+    unabsorbedRefundsPaise,
     totalPendingIncome,
     totalPendingExpenses,
     failedCount,

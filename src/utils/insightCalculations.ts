@@ -109,6 +109,17 @@ export function calculatePeriodLedger(transactions: Transaction[]): {
   for (const t of transactions) {
     if (t.status === 'completed' && t.type === 'expense') {
       expenseById.set(t.id, t)
+    }
+  }
+
+  for (const t of transactions) {
+    if (t.status === 'completed' && t.type === 'expense') {
+      // Guard against double-counting: If an expense transaction is linked to another existing
+      // expense transaction in the same dataset, count only the primary transaction.
+      if (t.linkedTransactionId && expenseById.has(t.linkedTransactionId)) {
+        continue
+      }
+
       completedExpenses.push(t)
       grossConfirmedExpensesPaise = addPaise(grossConfirmedExpensesPaise, t.amount)
 
@@ -170,7 +181,10 @@ export function calculatePeriodLedger(transactions: Transaction[]): {
   }
 
   const netConfirmedExpensesPaise = Math.max(0, subtractPaise(grossConfirmedExpensesPaise, totalRefundsPaise))
-  const netCashFlowPaise = subtractPaise(confirmedIncomePaise, netConfirmedExpensesPaise)
+  const netCashFlowPaise = subtractPaise(
+    addPaise(confirmedIncomePaise, totalRefundsPaise),
+    grossConfirmedExpensesPaise
+  )
 
   return {
     confirmedIncomePaise,

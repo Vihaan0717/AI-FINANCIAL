@@ -1,0 +1,10 @@
+Txn Date,Value Date,Description,Ref No./Cheque No.,Debit,Credit,Balance
+19/10/2026,19/10/2026,"Grocery, Milk & Eggs",REF-001,150.00,,5000.00
+19/10/2026,19/10/2026,"Café ""Espresso"" Delight",REF-002,220.00,,4780.00
+19/10/2026,19/10/2026,Invalid Amount Row,REF-ERR1,abc,,4780.00
+19/10/2026,19/10/2026,Excess Precision Row,REF-ERR2,10.999,,4780.00
+not_a_date,not_a_date,Invalid Date Row,REF-ERR3,100.00,,4680.00
+18/10/2026,18/10/2026,Both Debit and Credit Filled,REF-ERR4,50.00,50.00,4680.00
+18/10/2026,18/10/2026,Neither Debit nor Credit,REF-ERR5,,,4680.00
+17/10/2026,17/10/2026,Valid Row After Errors,REF-OK,500.00,,4180.00
+

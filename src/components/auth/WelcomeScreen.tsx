@@ -11,6 +11,7 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onGetStarted,
   onSignIn,
+  onContinueAsGuest,
 }) => {
   return (
     <div style={{ textAlign: 'center', padding: '10px 4px 6px' }}>
@@ -49,6 +50,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         >
           I Already Have an Account
         </button>
+
+        {onContinueAsGuest && (
+          <button
+            type="button"
+            className="auth-secondary-btn"
+            style={{ marginTop: '4px', opacity: 0.9 }}
+            onClick={onContinueAsGuest}
+            id="auth-welcome-continue-guest"
+          >
+            Explore App as Guest
+          </button>
+        )}
       </div>
     </div>
   )

@@ -360,17 +360,22 @@ function App() {
   const [authScreen, setAuthScreen] = useState<'welcome' | 'register' | 'login' | 'otp_verify' | 'forgot_password'>('welcome')
   const [pendingOtpEmail, setPendingOtpEmail] = useState<string>('')
   const [otpType, setOtpType] = useState<'email' | 'signup'>('email')
+  // User directive: Gmail/OTP login requirement turned off for now to deliver an immediate fresh app experience.
+  const REQUIRE_AUTH_GATE = false
+
   const [hasCompletedIntro, setHasCompletedIntro] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
+      if (!REQUIRE_AUTH_GATE) return true
       return sessionStorage.getItem('moneymate_intro_completed') === 'true'
     }
-    return false
+    return !REQUIRE_AUTH_GATE
   })
   const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
+      if (!REQUIRE_AUTH_GATE) return true
       return sessionStorage.getItem('moneymate_guest_session') === 'true'
     }
-    return false
+    return !REQUIRE_AUTH_GATE
   })
   const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<Transaction | null>(null)
   const [userDisplayName, setUserDisplayName] = useState<string>(() => {
@@ -3595,9 +3600,14 @@ function App() {
                   await auth.signOut()
                   sessionStorage.removeItem('moneymate_guest_session')
                   sessionStorage.removeItem('moneymate_intro_completed')
-                  setHasCompletedIntro(false)
-                  setIsGuestMode(false)
-                  setAuthScreen('welcome')
+                  if (REQUIRE_AUTH_GATE) {
+                    setHasCompletedIntro(false)
+                    setIsGuestMode(false)
+                    setAuthScreen('welcome')
+                  } else {
+                    setHasCompletedIntro(true)
+                    setIsGuestMode(true)
+                  }
                   notify('Logged out successfully.')
                 }}
               >
@@ -3714,7 +3724,7 @@ function App() {
   const View = views[section]
 
   // 1. Session resolution loading state (Splash)
-  if (auth.loading) {
+  if (REQUIRE_AUTH_GATE && auth.loading) {
     return (
       <div className={`auth-page-root ${dark ? 'dark' : 'light'}`} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="auth-ambient" aria-hidden="true">
@@ -3732,13 +3742,17 @@ function App() {
   }
 
   // 2. Dedicated separate authentication experience for signed-out users
-  if (!auth.isAuthenticated && !isGuestMode) {
+  if (REQUIRE_AUTH_GATE && !auth.isAuthenticated && !isGuestMode) {
     return (
       <AuthLayout dark={dark} onToggleTheme={() => setDark((prev) => !prev)}>
         {authScreen === 'welcome' && (
           <WelcomeScreen
             onGetStarted={() => setAuthScreen('register')}
             onSignIn={() => setAuthScreen('login')}
+            onContinueAsGuest={() => {
+              sessionStorage.setItem('moneymate_guest_session', 'true')
+              setIsGuestMode(true)
+            }}
           />
         )}
         {authScreen === 'register' && (
@@ -3794,7 +3808,7 @@ function App() {
   }
 
   // 3. Dedicated post-auth instruction slides shown after registration or login complete
-  if ((auth.isAuthenticated || isGuestMode) && !hasCompletedIntro) {
+  if (REQUIRE_AUTH_GATE && (auth.isAuthenticated || isGuestMode) && !hasCompletedIntro) {
     return (
       <AppIntroSlides
         onComplete={() => {
@@ -4233,9 +4247,14 @@ function App() {
                     await auth.signOut()
                     sessionStorage.removeItem('moneymate_guest_session')
                     sessionStorage.removeItem('moneymate_intro_completed')
-                    setHasCompletedIntro(false)
-                    setIsGuestMode(false)
-                    setAuthScreen('welcome')
+                    if (REQUIRE_AUTH_GATE) {
+                      setHasCompletedIntro(false)
+                      setIsGuestMode(false)
+                      setAuthScreen('welcome')
+                    } else {
+                      setHasCompletedIntro(true)
+                      setIsGuestMode(true)
+                    }
                     notify('Logged out successfully')
                     setIsDrawerOpen(false)
                   }}

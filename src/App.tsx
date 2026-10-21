@@ -33,7 +33,9 @@ import {
   ReceiptText,
   Search,
   Settings,
+  Shield,
   ShieldCheck,
+  Lock,
   ShoppingBag,
   Sliders,
   Sparkles,
@@ -100,7 +102,10 @@ import {
   OtpVerifyScreen,
   ResetPasswordScreen,
   AppIntroSlides,
+  PinLockScreen,
+  PinSetupScreen,
 } from './components/auth'
+import { pinAuthService } from './services/pinAuthService'
 import { getLucideCategoryIcon } from './utils/categoryIcons'
 import type { Category } from './types/category'
 import type { RestoreResult } from './types/backup'
@@ -385,8 +390,21 @@ function App() {
     return ''
   })
 
-  // Dynamic user name based on logged-in Supabase account or custom display name
+  // Banking PIN Lock State: if user has a PIN account configured and session is locked
+  const [isPinLocked, setIsPinLocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      if (pinAuthService.hasPinAccount()) {
+        return !pinAuthService.isSessionUnlocked()
+      }
+    }
+    return false
+  })
+  const [showPinSetup, setShowPinSetup] = useState<boolean>(false)
+
+  // Dynamic user name based on PIN account, logged-in Supabase account, or custom display name
   const effectiveUserName = useMemo(() => {
+    const pinUser = pinAuthService.getActiveUser() || pinAuthService.getProfile()
+    if (pinUser?.fullName) return pinUser.fullName
     if (auth.isAuthenticated && auth.user) {
       const metaName = auth.user.user_metadata?.full_name || auth.user.user_metadata?.name
       if (metaName) return metaName
@@ -400,7 +418,7 @@ function App() {
       }
     }
     return userDisplayName || 'Arjun Singh'
-  }, [auth.isAuthenticated, auth.user, userDisplayName])
+  }, [auth.isAuthenticated, auth.user, userDisplayName, isPinLocked])
 
   // Dynamic local time-of-day greeting (Morning / Afternoon / Evening)
   const timeGreeting = useMemo(() => {
@@ -3616,32 +3634,44 @@ function App() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button
-                className="outline-button"
-                style={{ fontSize: '11px', fontWeight: 600 }}
-                onClick={() => {
-                  sessionStorage.removeItem('moneymate_guest_session')
-                  sessionStorage.removeItem('moneymate_intro_completed')
-                  setHasCompletedIntro(false)
-                  setIsGuestMode(false)
-                  setAuthScreen('welcome')
-                }}
-              >
-                Exit Guest Mode
-              </button>
-              <button
-                className="primary-button"
-                style={{ fontSize: '11px', fontWeight: 700 }}
-                onClick={() => {
-                  sessionStorage.removeItem('moneymate_guest_session')
-                  sessionStorage.removeItem('moneymate_intro_completed')
-                  setHasCompletedIntro(false)
-                  setIsGuestMode(false)
-                  setAuthScreen('login')
-                }}
-              >
-                Sign In
-              </button>
+              {pinAuthService.hasPinAccount() ? (
+                <button
+                  className="outline-button"
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#8b5cf6',
+                    borderColor: 'rgba(139, 92, 246, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                  onClick={() => {
+                    pinAuthService.lockSession()
+                    setIsPinLocked(true)
+                    notify('App locked.')
+                  }}
+                >
+                  <Lock size={12} />
+                  <span>Lock App</span>
+                </button>
+              ) : (
+                <button
+                  className="primary-button"
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                  onClick={() => setShowPinSetup(true)}
+                >
+                  <Shield size={12} />
+                  <span>Set Security PIN</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -3720,8 +3750,45 @@ function App() {
     'AI Assistant': 4,
   }
   const currentTabIndex = tabIndexMap[section] ?? 0
-
   const View = views[section]
+
+  // 0a. PIN Lock Screen for accounts secured with Bank-Style PIN
+  if (isPinLocked) {
+    return (
+      <AuthLayout dark={dark} onToggleTheme={() => setDark((prev) => !prev)}>
+        <PinLockScreen
+          onUnlockSuccess={(user) => {
+            setIsPinLocked(false)
+            setUserDisplayName(user.fullName)
+            notify(`Welcome back, ${user.fullName.split(' ')[0]}!`)
+          }}
+          onSwitchAccount={() => {
+            pinAuthService.clearAccount()
+            setIsPinLocked(false)
+            setShowPinSetup(true)
+            notify('Previous PIN cleared. You can create a new PIN.')
+          }}
+        />
+      </AuthLayout>
+    )
+  }
+
+  // 0b. PIN Setup Screen if user triggers setup
+  if (showPinSetup) {
+    return (
+      <AuthLayout dark={dark} onToggleTheme={() => setDark((prev) => !prev)}>
+        <PinSetupScreen
+          onBack={() => setShowPinSetup(false)}
+          onSuccess={(user) => {
+            setShowPinSetup(false)
+            setIsPinLocked(false)
+            setUserDisplayName(user.fullName)
+            notify('Security PIN created successfully! Workspace unlocked.')
+          }}
+        />
+      </AuthLayout>
+    )
+  }
 
   // 1. Session resolution loading state (Splash)
   if (REQUIRE_AUTH_GATE && auth.loading) {
@@ -4262,22 +4329,52 @@ function App() {
                   Log Out
                 </button>
               ) : (
-                <button
-                  className="primary-button"
-                  style={{
-                    fontSize: '10px',
-                    padding: '4px 12px',
-                    minHeight: '28px',
-                  }}
-                  onClick={() => {
-                    sessionStorage.removeItem('moneymate_guest_session')
-                    setIsGuestMode(false)
-                    setAuthScreen('login')
-                    setIsDrawerOpen(false)
-                  }}
-                >
-                  Sign In
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {pinAuthService.hasPinAccount() ? (
+                    <button
+                      className="outline-button"
+                      style={{
+                        fontSize: '10px',
+                        color: '#8b5cf6',
+                        borderColor: 'rgba(139, 92, 246, 0.4)',
+                        padding: '4px 10px',
+                        minHeight: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      onClick={() => {
+                        pinAuthService.lockSession()
+                        setIsPinLocked(true)
+                        setIsDrawerOpen(false)
+                        notify('App locked.')
+                      }}
+                    >
+                      <Lock size={12} />
+                      <span>Lock</span>
+                    </button>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      style={{
+                        fontSize: '10px',
+                        padding: '4px 10px',
+                        minHeight: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                      }}
+                      onClick={() => {
+                        setShowPinSetup(true)
+                        setIsDrawerOpen(false)
+                      }}
+                    >
+                      <Shield size={12} />
+                      <span>Set PIN</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

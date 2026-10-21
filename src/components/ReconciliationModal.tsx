@@ -1038,7 +1038,8 @@ export function ReconciliationModal({
     notify('Decision reset to initial auto-evaluation.')
   }
 
-  const handleDiscard = (silent = false) => {
+  const handleDiscard = (silent: boolean | React.MouseEvent = false) => {
+    const isSilent = typeof silent === 'boolean' ? silent : false
     setSelectedFile(null)
     setFileContent('')
     setFileHash('')
@@ -1053,7 +1054,7 @@ export function ReconciliationModal({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-    if (!silent) {
+    if (!isSilent) {
       notify('Draft reconciliation discarded from memory.')
     }
   }

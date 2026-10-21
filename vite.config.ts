@@ -67,4 +67,8 @@ function localStatementBridgePlugin(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), localStatementBridgePlugin()],
+  server: {
+    host: true, // Listen on all local IP addresses for Android device access
+    port: 5173,
+  },
 })

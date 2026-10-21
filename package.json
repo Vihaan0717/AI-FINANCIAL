@@ -9,9 +9,16 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:build": "npm run android:sync && cmd /c \"cd android && gradlew.bat assembleDebug\"",
+    "android:open": "npx cap open android",
+    "android:dev:sync": "npx cap sync android --config capacitor.config.dev.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@supabase/supabase-js": "^2.118.0",
     "lucide-react": "^1.59.0",
     "react": "^19.3.1",

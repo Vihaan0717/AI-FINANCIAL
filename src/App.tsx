@@ -55,9 +55,6 @@ import {
 import {
   Area,
   AreaChart,
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -868,7 +865,7 @@ function App() {
 
   /* ------------------- Dashboard Section ------------------- */
   const Dashboard = () => {
-    const [analyticsTab, setAnalyticsTab] = useState<'cashflow' | 'inflow' | 'categories'>('cashflow')
+    const [analyticsTab, setAnalyticsTab] = useState<'cashflow' | 'inflow'>('cashflow')
     const [waveHoverIndex, setWaveHoverIndex] = useState<number | null>(null)
 
     // Authentic last 7 days spending wave data
@@ -1319,23 +1316,6 @@ function App() {
                   >
                     Inflow/Outflow
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsTab('categories')}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 8,
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      border: 'none',
-                      background: analyticsTab === 'categories' ? '#ffffff' : 'transparent',
-                      color: analyticsTab === 'categories' ? '#6d3fe0' : '#5b5780',
-                      boxShadow: analyticsTab === 'categories' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Categories
-                  </button>
                 </div>
               </div>
 
@@ -1470,7 +1450,7 @@ function App() {
                     ))}
                   </div>
                 </>
-              ) : analyticsTab === 'inflow' ? (
+              ) : (
                 <div style={{ width: '100%', height: 130 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
@@ -1516,85 +1496,6 @@ function App() {
                       <Area type="monotone" dataKey="expense" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#waveExpenseGradLg)" />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
-              ) : (
-                <div style={{ width: '100%', height: 130, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {summary.categoryTotals.length > 0 ? (
-                    <>
-                      <div style={{ position: 'relative', width: '45%', height: '100%' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={summary.categoryTotals}
-                              dataKey="paise"
-                              innerRadius={36}
-                              outerRadius={54}
-                              paddingAngle={3}
-                              stroke="none"
-                              startAngle={90}
-                              endAngle={-270}
-                            >
-                              {summary.categoryTotals.map((item) => (
-                                <Cell key={item.category} fill={item.color} />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            inset: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            pointerEvents: 'none',
-                          }}
-                        >
-                          <b style={{ fontSize: '11px', color: '#1f1a3d', fontWeight: 800 }}>
-                            {formatPaise(summary.totalConfirmedExpenses)}
-                          </b>
-                          <small style={{ fontSize: '8px', color: '#6d6796', textTransform: 'uppercase' }}>
-                            Spent
-                          </small>
-                        </div>
-                      </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '120px' }}>
-                        {summary.categoryTotals.slice(0, 4).map((item) => (
-                          <div
-                            key={item.category}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              fontSize: '10px',
-                              color: '#5b5780',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                              <span
-                                style={{
-                                  width: '8px',
-                                  height: '8px',
-                                  borderRadius: '50%',
-                                  background: item.color,
-                                  flexShrink: 0,
-                                }}
-                              />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85px' }}>
-                                {item.category}
-                              </span>
-                            </div>
-                            <b style={{ color: '#1f1a3d', fontWeight: 700 }}>{item.percentage}%</b>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ width: '100%', textAlign: 'center', color: '#6d6796', fontSize: '11px', padding: '20px 0' }}>
-                      No categorized expenses recorded yet
-                    </div>
-                  )}
                 </div>
               )}
             </div>

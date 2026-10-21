@@ -40,8 +40,8 @@ export function useAuth() {
     }
   }, [])
 
-  const signUp = useCallback(async (email: string, pass: string) => {
-    return authService.signUp(email, pass)
+  const signUp = useCallback(async (email: string, pass: string, fullName?: string) => {
+    return authService.signUp(email, pass, fullName)
   }, [])
 
   const signIn = useCallback(async (email: string, pass: string) => {
@@ -50,6 +50,14 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     return authService.signOut()
+  }, [])
+
+  const signInWithOtp = useCallback(async (email: string) => {
+    return authService.signInWithOtp(email)
+  }, [])
+
+  const verifyOtp = useCallback(async (email: string, token: string, type: 'email' | 'signup' = 'email') => {
+    return authService.verifyOtp(email, token, type)
   }, [])
 
   const resetPassword = useCallback(async (email: string) => {
@@ -62,6 +70,8 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
+    signInWithOtp,
+    verifyOtp,
     resetPassword,
   }
 }

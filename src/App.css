@@ -77,15 +77,17 @@ body{background:radial-gradient(circle at 7% 6%,#b8d8ff 0,transparent 26rem),rad
 .budget-summary-box{padding:18px;border-radius:16px;border:1px solid var(--line);background:var(--deep);margin-bottom:16px}
 
 /* Milestone 5: Personal Planner, Recurring Bills & Forecast Styles */
-.planner-tabs{display:flex;gap:6px;padding:4px;background:var(--deep);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;width:fit-content}
-.planner-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:.2s}
+.planner-tabs{display:flex;gap:6px;padding:4px;background:var(--deep);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;width:100%;max-width:100%;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.planner-tabs::-webkit-scrollbar{display:none}
+.planner-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:.2s;flex-shrink:0;white-space:nowrap}
 .planner-tab:hover{color:var(--text);background:var(--hover)}
 .planner-tab.active{color:var(--text);background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .planner-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px}
-.planner-stat-card{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;justify-content:space-between}
+.planner-stat-card{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;justify-content:space-between;min-width:0;box-sizing:border-box}
 .planner-stat-card span{font-size:10px;color:var(--muted);font-weight:700}
 .planner-stat-card strong{font-size:22px;letter-spacing:-.8px;margin:8px 0 2px;color:var(--text)}
 .planner-stat-card p{font-size:10px;color:var(--muted);margin:0}
+@media(max-width:768px){.planner-stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}}
 
 .bill-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;transition:border-color .15s}
 .bill-card:hover{border-color:var(--purple)}

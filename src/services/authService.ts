@@ -79,24 +79,34 @@ export class SupabaseAuthService {
     }
   }
 
-  async signUp(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
+  async signUp(
+    email: string,
+    password: string,
+    fullName?: string
+  ): Promise<{ user: User | null; session: Session | null; error: string | null }> {
     if (!this.client) {
-      return { user: null, error: 'Supabase authentication is not configured in this environment.' }
+      return { user: null, session: null, error: 'Supabase authentication is not configured in this environment.' }
     }
 
     try {
+      const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined
+
       const { data, error } = await this.client.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          data: fullName?.trim() ? { full_name: fullName.trim(), name: fullName.trim() } : undefined,
+          emailRedirectTo: redirectUrl,
+        },
       })
 
       if (error) {
-        return { user: null, error: error.message }
+        return { user: null, session: null, error: error.message }
       }
 
-      return { user: data.user, error: null }
+      return { user: data.user, session: data.session, error: null }
     } catch (err) {
-      return { user: null, error: err instanceof Error ? err.message : 'Sign up failed.' }
+      return { user: null, session: null, error: err instanceof Error ? err.message : 'Sign up failed.' }
     }
   }
 
@@ -134,6 +144,65 @@ export class SupabaseAuthService {
       return { error: null }
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Logout failed.' }
+    }
+  }
+
+  async signInWithOtp(email: string): Promise<{ error: string | null }> {
+    if (!this.client) {
+      return { error: 'Supabase authentication is not configured in this environment.' }
+    }
+
+    try {
+      const { error } = await this.client.auth.signInWithOtp({
+        email: email.trim(),
+      })
+
+      if (error) {
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to send OTP.' }
+    }
+  }
+
+  async verifyOtp(
+    email: string,
+    token: string,
+    type: 'email' | 'signup' = 'email'
+  ): Promise<{ user: User | null; session: Session | null; error: string | null }> {
+    if (!this.client) {
+      return { user: null, session: null, error: 'Supabase authentication is not configured in this environment.' }
+    }
+
+    try {
+      let { data, error } = await this.client.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type,
+      })
+
+      // If failed on default 'email', fallback to 'signup' token verification in case user is verifying signup
+      if (error && type === 'email') {
+        const fallback = await this.client.auth.verifyOtp({
+          email: email.trim(),
+          token: token.trim(),
+          type: 'signup',
+        })
+        if (!fallback.error) {
+          data = fallback.data
+          error = null
+        }
+      }
+
+      if (error) {
+        return { user: null, session: null, error: error.message }
+      }
+
+      return { user: data.user, session: data.session, error: null }
+    } catch (err) {
+      return { user: null, session: null, error: err instanceof Error ? err.message : 'OTP verification failed.' }
     }
   }
 

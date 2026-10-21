@@ -33,7 +33,7 @@ import {
   ReceiptText,
   Search,
   Settings,
-  Shirt,
+  ShieldCheck,
   ShoppingBag,
   Sliders,
   Sparkles,
@@ -45,7 +45,6 @@ import {
   Tv,
   Upload,
   Utensils,
-  WalletCards,
   Wrench,
   Zap,
   X,
@@ -54,11 +53,6 @@ import {
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -94,7 +88,19 @@ import { FinancialInsightsView } from './components/FinancialInsightsView'
 import { BackupModal } from './components/BackupModal'
 import { CategoryManagementModal } from './components/CategoryManagementModal'
 import { ReconciliationModal } from './components/ReconciliationModal'
+import { AuthOnboardingModal } from './components/AuthOnboardingModal'
+import { TransactionDetailModal } from './components/TransactionDetailModal'
 import { useCategories } from './hooks/useCategories'
+import { useAuth } from './hooks/useAuth'
+import {
+  AuthLayout,
+  WelcomeScreen,
+  RegisterScreen,
+  LoginScreen,
+  OtpVerifyScreen,
+  ResetPasswordScreen,
+  AppIntroSlides,
+} from './components/auth'
 import { getLucideCategoryIcon } from './utils/categoryIcons'
 import type { Category } from './types/category'
 import type { RestoreResult } from './types/backup'
@@ -198,13 +204,15 @@ function splitDisplayDate(dateStr: string): { date: string; time: string } {
 function TransactionRow({
   item,
   onEdit,
-  onDelete,
+  onDelete: _onDelete,
+  onSelect,
   categoryMap,
   isTableView = false,
 }: {
   item: Transaction
-  onEdit: (t: Transaction) => void
-  onDelete: (t: Transaction) => void
+  onEdit?: (t: Transaction) => void
+  onDelete?: (t: Transaction) => void
+  onSelect?: (t: Transaction) => void
   categoryMap?: Map<string, Category>
   isTableView?: boolean
 }) {
@@ -220,23 +228,40 @@ function TransactionRow({
   const amountClass = isIncome ? 'income' : isTransfer ? 'transfer' : isRefund ? 'refund' : 'expense'
   const { date: displayDate, time: displayTime } = splitDisplayDate(item.date)
 
+  const handleRowClick = () => {
+    if (onSelect) {
+      onSelect(item)
+    } else if (onEdit) {
+      onEdit(item)
+    }
+  }
+
   if (isTableView) {
     return (
-      <div className="transaction-row liquid-tx-grid liquid-tx-row">
+      <div
+        className="transaction-row liquid-tx-grid liquid-tx-row"
+        onClick={handleRowClick}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        title="Tap to view details, edit, or delete"
+      >
         {/* Col 1: Transaction Main (Icon + Description + Category/Payment) */}
-        <div className="liquid-tx-col-main">
+        <div className="liquid-tx-col-main" style={{ minWidth: 0, flex: '1 1 0%' }}>
           <div
             className={`transaction-icon ${(item.category || 'other').toLowerCase().slice(0, 4)}`}
             style={categoryColor ? { backgroundColor: `${categoryColor}20`, color: categoryColor } : undefined}
           >
             <Icon size={16} />
           </div>
-          <div className="transaction-name" style={{ minWidth: 0 }}>
+          <div className="transaction-name" style={{ minWidth: 0, flex: '1 1 0%' }}>
             <strong className="transaction-title">{item.description}</strong>
             <div className="transaction-meta">
               <span>{item.category || 'General'}</span>
               <span className="dot-sep">·</span>
               <span>{item.paymentMethod || 'UPI'}</span>
+              <span className="dot-sep">·</span>
+              <span className="transaction-date-text">{displayDate}</span>
               {isRefund && (
                 <span className="status-pill completed" style={{ marginLeft: '4px' }}>
                   Refund
@@ -251,44 +276,31 @@ function TransactionRow({
           </div>
         </div>
 
-        {/* Col 2: Date slot - Dedicated Column */}
+        {/* Col 2: Date slot - Dedicated Column (hidden on mobile) */}
         <div className="liquid-tx-col-date">
           <span>{displayDate}</span>
           {displayTime && <small>{displayTime}</small>}
         </div>
 
-        {/* Col 3: Amount slot - Dedicated Column */}
-        <div className="liquid-tx-col-amount">
-          <strong className={`transaction-amount ${amountClass}`}>
+        {/* Col 3: Amount slot - Dedicated Column (strictly right-aligned) */}
+        <div className="liquid-tx-col-amount" style={{ marginLeft: 'auto', textAlign: 'right', justifySelf: 'end' }}>
+          <strong className={`transaction-amount ${amountClass}`} style={{ textAlign: 'right' }}>
             {sign}{formatPaise(item.amount)}
           </strong>
-        </div>
-
-        {/* Col 4: Actions slot - Dedicated Column */}
-        <div className="liquid-tx-col-actions">
-          <button
-            className="action-btn"
-            onClick={() => onEdit(item)}
-            aria-label={`Edit ${item.description}`}
-            title="Edit transaction"
-          >
-            <Edit2 size={13} />
-          </button>
-          <button
-            className="action-btn delete"
-            onClick={() => onDelete(item)}
-            aria-label={`Delete ${item.description}`}
-            title="Delete transaction"
-          >
-            <Trash2 size={13} />
-          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="transaction-row">
+    <div
+      className="transaction-row"
+      onClick={handleRowClick}
+      style={{ cursor: 'pointer' }}
+      role="button"
+      tabIndex={0}
+      title="Tap to view details, edit, or delete"
+    >
       <div
         className={`transaction-icon ${(item.category || 'other').toLowerCase().slice(0, 4)}`}
         style={categoryColor ? { backgroundColor: `${categoryColor}20`, color: categoryColor } : undefined}
@@ -296,7 +308,7 @@ function TransactionRow({
         <Icon size={16} />
       </div>
 
-      <div className="transaction-name">
+      <div className="transaction-name" style={{ minWidth: 0, flex: '1 1 0%' }}>
         <strong className="transaction-title">{item.description}</strong>
         <div className="transaction-meta">
           <span>{item.category || 'General'}</span>
@@ -317,29 +329,10 @@ function TransactionRow({
         </div>
       </div>
 
-      <div className="transaction-right">
-        <strong className={`transaction-amount ${amountClass}`}>
+      <div className="transaction-right" style={{ marginLeft: 'auto', textAlign: 'right', justifySelf: 'end' }}>
+        <strong className={`transaction-amount ${amountClass}`} style={{ textAlign: 'right' }}>
           {sign}{formatPaise(item.amount)}
         </strong>
-
-        <div className="transaction-actions">
-          <button
-            className="action-btn"
-            onClick={() => onEdit(item)}
-            aria-label={`Edit ${item.description}`}
-            title="Edit transaction"
-          >
-            <Edit2 size={13} />
-          </button>
-          <button
-            className="action-btn delete"
-            onClick={() => onDelete(item)}
-            aria-label={`Delete ${item.description}`}
-            title="Delete transaction"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -361,6 +354,56 @@ function App() {
     typeof window !== 'undefined' ? localStorage.getItem('moneymate_gemini_api_key') || '' : ''
   )
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const auth = useAuth()
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalTab, setAuthModalTab] = useState<'onboarding' | 'auth'>('onboarding')
+  const [authScreen, setAuthScreen] = useState<'welcome' | 'register' | 'login' | 'otp_verify' | 'forgot_password'>('welcome')
+  const [pendingOtpEmail, setPendingOtpEmail] = useState<string>('')
+  const [otpType, setOtpType] = useState<'email' | 'signup'>('email')
+  const [hasCompletedIntro, setHasCompletedIntro] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('moneymate_intro_completed') === 'true'
+    }
+    return false
+  })
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('moneymate_guest_session') === 'true'
+    }
+    return false
+  })
+  const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<Transaction | null>(null)
+  const [userDisplayName, setUserDisplayName] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('moneymate_display_name') || ''
+    }
+    return ''
+  })
+
+  // Dynamic user name based on logged-in Supabase account or custom display name
+  const effectiveUserName = useMemo(() => {
+    if (auth.isAuthenticated && auth.user) {
+      const metaName = auth.user.user_metadata?.full_name || auth.user.user_metadata?.name
+      if (metaName) return metaName
+      if (userDisplayName) return userDisplayName
+      if (auth.user.email) {
+        const prefix = auth.user.email.split('@')[0]
+        return prefix
+          .split(/[._-]/)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ')
+      }
+    }
+    return userDisplayName || 'Arjun Singh'
+  }, [auth.isAuthenticated, auth.user, userDisplayName])
+
+  // Dynamic local time-of-day greeting (Morning / Afternoon / Evening)
+  const timeGreeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour >= 4 && hour < 12) return 'Good morning'
+    if (hour >= 12 && hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }, [])
 
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState([
@@ -919,20 +962,6 @@ function App() {
       }))
     }, [transactions])
 
-    const categoryBarData = useMemo(() => {
-      return summary.categoryTotals.slice(0, 8).map((c) => ({
-        name: c.category,
-        amount: Math.round(c.paise / 100),
-        color: c.color,
-      }))
-    }, [summary.categoryTotals])
-
-    // Spending peak
-    const peakDay = summary.dailySpending.reduce(
-      (max, curr) => (curr.paise > max.paise ? curr : max),
-      { date: '', day: '', paise: 0, rupees: 0 }
-    )
-
     const budgetStats = useMemo(() => {
       const topCategories = summary.categoryTotals.slice(0, 3)
       const defaults = [
@@ -977,27 +1006,29 @@ function App() {
       <div className="liquid-dashboard-container">
         {/* Top User Greeting Header */}
         <div className="liquid-header">
-          <div className="liquid-avatar">A</div>
-          <div className="liquid-header-info">
-            <div className="liquid-greeting">Good evening</div>
-            <div className="liquid-username">Arjun Singh</div>
+          <div
+            className="liquid-avatar"
+            onClick={() => {
+              setAuthModalTab('auth')
+              setIsAuthModalOpen(true)
+            }}
+            style={{ cursor: 'pointer' }}
+            title={auth.isAuthenticated && auth.user?.email ? `Signed in as ${auth.user.email}` : 'Sign In / Register'}
+          >
+            {effectiveUserName.charAt(0).toUpperCase() || 'A'}
+          </div>
+          <div
+            className="liquid-header-info"
+            onClick={() => {
+              setAuthModalTab('auth')
+              setIsAuthModalOpen(true)
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="liquid-greeting">{timeGreeting}</div>
+            <div className="liquid-username">{effectiveUserName}</div>
           </div>
           <div className="liquid-header-actions">
-            <button
-              className={`liquid-mode-pill ${isDemoMode ? 'demo' : 'real'}`}
-              onClick={() => toggleDemoMode()}
-              title="Click to toggle between Real Data and Demo Data"
-            >
-              <i
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: isDemoMode ? '#a3401a' : '#0b6b4a',
-                }}
-              />
-              {isDemoMode ? 'Demo Mode' : 'Live Data'}
-            </button>
             <button
               className="liquid-ai-round-btn"
               onClick={() => go('AI Assistant')}
@@ -1022,10 +1053,14 @@ function App() {
           <div className="liquid-dashboard-col-left">
             {/* Hero Card: Estimated Spendable with Liquid Waves */}
             <div className="liquid-hero-card">
-              <svg className="liquid-hero-waves" viewBox="0 0 354 90" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0 50 C40 20 80 20 120 45 C160 70 200 70 240 40 C280 15 320 25 354 45 L354 90 L0 90Z" fill="rgba(255,255,255,.14)" />
-                <path d="M0 62 C50 40 90 45 130 62 C170 80 220 75 260 55 C300 38 330 45 354 58 L354 90 L0 90Z" fill="rgba(255,255,255,.18)" />
-              </svg>
+              <div className="liquid-hero-waves-wrapper" aria-hidden="true">
+                <svg className="liquid-hero-wave-layer wave-1" viewBox="0 0 708 90" preserveAspectRatio="none">
+                  <path d="M0 50 C40 20 80 20 120 45 C160 70 200 70 240 40 C280 15 320 25 354 50 C394 20 434 20 474 45 C514 70 554 70 594 40 C634 15 674 25 708 50 L708 90 L0 90Z" fill="rgba(255,255,255,.14)" />
+                </svg>
+                <svg className="liquid-hero-wave-layer wave-2" viewBox="0 0 708 90" preserveAspectRatio="none">
+                  <path d="M0 62 C50 40 90 45 130 62 C170 80 220 75 260 55 C300 38 330 45 354 62 C404 40 444 45 484 62 C524 80 574 75 614 55 C654 38 684 45 708 62 L708 90 L0 90Z" fill="rgba(255,255,255,.18)" />
+                </svg>
+              </div>
               <div>
                 <div className="liquid-hero-top">
                   <span className="liquid-hero-label">Estimated spendable</span>
@@ -1119,6 +1154,7 @@ function App() {
                       item={item}
                       onEdit={handleOpenEditModal}
                       onDelete={handleOpenDeleteModal}
+                      onSelect={setSelectedDetailTransaction}
                       categoryMap={categoryMap}
                     />
                   ))}
@@ -1333,11 +1369,11 @@ function App() {
                         cashFlowBarData.length > 0
                           ? cashFlowBarData
                           : [
-                              { name: '1 Oct', income: 15000, expense: 4200 },
-                              { name: '5 Oct', income: 12000, expense: 6800 },
-                              { name: '10 Oct', income: 28000, expense: 11500 },
-                              { name: '15 Oct', income: 9000, expense: 7400 },
-                              { name: '20 Oct', income: 38000, expense: 14200 },
+                              { name: '1 Oct', income: 15000, expense: 4200, net: 10800 },
+                              { name: '5 Oct', income: 12000, expense: 6800, net: 5200 },
+                              { name: '10 Oct', income: 28000, expense: 11500, net: 16500 },
+                              { name: '15 Oct', income: 9000, expense: 7400, net: 1600 },
+                              { name: '20 Oct', income: 38000, expense: 14200, net: 23800 },
                             ]
                       }
                       margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
@@ -1603,10 +1639,9 @@ function App() {
         {/* Transactions Table / List */}
         <article className="panel table-panel liquid-tx-container">
           <div className="table-head liquid-tx-grid liquid-tx-head">
-            <span>Transaction</span>
-            <span>Date</span>
-            <span style={{ textAlign: 'right' }}>Amount</span>
-            <span style={{ textAlign: 'right' }}>Actions</span>
+            <span className="liquid-tx-col-main">Transaction</span>
+            <span className="liquid-tx-col-date">Date</span>
+            <span className="liquid-tx-col-amount" style={{ textAlign: 'right', justifySelf: 'end', marginLeft: 'auto' }}>Amount</span>
           </div>
 
           {loading ? (
@@ -1621,6 +1656,7 @@ function App() {
                   item={item}
                   onEdit={handleOpenEditModal}
                   onDelete={handleOpenDeleteModal}
+                  onSelect={setSelectedDetailTransaction}
                   categoryMap={categoryMap}
                   isTableView={true}
                 />
@@ -1687,7 +1723,7 @@ function App() {
     const upcomingInvestment = useMemo(() => {
       const foundBill = bills.find(
         (b) =>
-          b.status === 'pending' &&
+          (b.status === 'upcoming' || b.status === 'due') &&
           (b.category?.toLowerCase().includes('sip') ||
             b.category?.toLowerCase().includes('invest') ||
             b.title?.toLowerCase().includes('sip'))
@@ -1702,7 +1738,7 @@ function App() {
       }
       const foundSched = schedules.find(
         (s) =>
-          s.isActive &&
+          s.status === 'active' &&
           (s.category?.toLowerCase().includes('sip') ||
             s.category?.toLowerCase().includes('invest') ||
             s.title?.toLowerCase().includes('sip'))
@@ -1711,16 +1747,16 @@ function App() {
         return {
           title: foundSched.title,
           amountPaise: foundSched.amountPaise,
-          dueDate: `Every ${foundSched.dayOfMonth || 28}th`,
+          dueDate: `Every ${foundSched.preferredDayOfMonth || 28}th`,
           isReal: true,
         }
       }
-      const anyPending = bills.find((b) => b.status === 'pending')
-      if (anyPending) {
+      const anyUpcoming = bills.find((b) => b.status === 'upcoming' || b.status === 'due')
+      if (anyUpcoming) {
         return {
-          title: anyPending.title,
-          amountPaise: anyPending.amountPaise,
-          dueDate: `Due on ${new Date(anyPending.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+          title: anyUpcoming.title,
+          amountPaise: anyUpcoming.amountPaise,
+          dueDate: `Due on ${new Date(anyUpcoming.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
           isReal: true,
         }
       }
@@ -2036,7 +2072,7 @@ function App() {
               </div>
 
               <div className="budget-sip-amount">
-                {formatPaise(upcomingInvestment.amountPaise)}
+                {formatPaise(upcomingInvestment.amountPaise ?? 0)}
               </div>
               <p className="budget-sip-desc">
                 {upcomingInvestment.dueDate}
@@ -3303,23 +3339,6 @@ function App() {
           </button>
         </div>
 
-        <div>
-          <p>
-            <b>Active Workspace Data Mode</b>
-            <span>
-              {isDemoMode
-                ? 'Currently in Demo Mode. Real financial records in IndexedDB are untouched.'
-                : 'Currently using Real Data. Transactions are securely stored in your browser IndexedDB.'}
-            </span>
-          </p>
-          <button
-            onClick={() => toggleDemoMode()}
-            className="outline-button"
-            style={{ fontSize: '10px' }}
-          >
-            Switch to {isDemoMode ? 'Real Data' : 'Demo Mode'}
-          </button>
-        </div>
 
         <div>
           <p>
@@ -3480,10 +3499,186 @@ function App() {
 
         <div>
           <p>
-            <b>Cloud Connection & Auth</b>
-            <span>Supabase sync and multi-device accounts arrive in milestone 9.</span>
+            <b>Personal Profile & Name</b>
+            <span>The name shown on the dashboard greeting ({timeGreeting}) and financial reports.</span>
           </p>
-          <em>Milestone 9</em>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="e.g. Arjun Singh"
+              value={userDisplayName}
+              onChange={(e) => {
+                setUserDisplayName(e.target.value)
+                localStorage.setItem('moneymate_display_name', e.target.value)
+              }}
+              style={{
+                height: '32px',
+                padding: '0 10px',
+                borderRadius: '8px',
+                border: '1px solid var(--line)',
+                background: 'var(--deep)',
+                color: 'var(--text)',
+                fontSize: '11px',
+                width: '160px',
+              }}
+            />
+            {userDisplayName && (
+              <button
+                className="outline-button"
+                style={{ fontSize: '10px', minHeight: '32px' }}
+                onClick={() => {
+                  setUserDisplayName('')
+                  localStorage.removeItem('moneymate_display_name')
+                  notify('Display name reset')
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p>
+            <b>FinanceAI Onboarding Slides</b>
+            <span>Re-experience the 3-step dynamic living orb presentation, goals selection, and AI planner.</span>
+          </p>
+          <button
+            className="outline-button"
+            id="btn-replay-intro-slides"
+            style={{ fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => {
+              sessionStorage.removeItem('moneymate_intro_completed')
+              setHasCompletedIntro(false)
+            }}
+          >
+            <Sparkles size={13} />
+            Replay Intro Slides
+          </button>
+        </div>
+
+        <div>
+          <p>
+            <b>Cloud Account & Security</b>
+            <span>
+              {auth.isAuthenticated && auth.user?.email
+                ? `Signed in as ${effectiveUserName} (${auth.user.email}) · Multi-device cloud sync active with Supabase Row-Level Security.`
+                : 'Local Offline Mode (Guest). Transactions are stored securely in browser IndexedDB. Sign in or register to sync across devices.'}
+            </span>
+          </p>
+          {auth.isAuthenticated ? (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: '#0b6b4a',
+                  background: '#c9f7e3',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                }}
+              >
+                Synced
+              </span>
+              <button
+                className="outline-button"
+                style={{
+                  color: '#ef4444',
+                  borderColor: 'rgba(239, 68, 68, 0.3)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                onClick={async () => {
+                  await auth.signOut()
+                  sessionStorage.removeItem('moneymate_guest_session')
+                  sessionStorage.removeItem('moneymate_intro_completed')
+                  setHasCompletedIntro(false)
+                  setIsGuestMode(false)
+                  setAuthScreen('welcome')
+                  notify('Logged out successfully.')
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                className="outline-button"
+                style={{ fontSize: '11px', fontWeight: 600 }}
+                onClick={() => {
+                  sessionStorage.removeItem('moneymate_guest_session')
+                  sessionStorage.removeItem('moneymate_intro_completed')
+                  setHasCompletedIntro(false)
+                  setIsGuestMode(false)
+                  setAuthScreen('welcome')
+                }}
+              >
+                Exit Guest Mode
+              </button>
+              <button
+                className="primary-button"
+                style={{ fontSize: '11px', fontWeight: 700 }}
+                onClick={() => {
+                  sessionStorage.removeItem('moneymate_guest_session')
+                  sessionStorage.removeItem('moneymate_intro_completed')
+                  setHasCompletedIntro(false)
+                  setIsGuestMode(false)
+                  setAuthScreen('login')
+                }}
+              >
+                Sign In
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p>
+            <b>App Feature Slides</b>
+            <span>
+              Explore the swipeable iOS presentation slides detailing AI receipt scanning, cash flow waves, and pantry sync.
+            </span>
+          </p>
+          <button
+            className="outline-button"
+            style={{ fontSize: '11px', fontWeight: 700 }}
+            onClick={() => {
+              setHasCompletedIntro(false)
+            }}
+          >
+            View Feature Slides
+          </button>
+        </div>
+
+        <div>
+          <p>
+            <b>Developer Information</b>
+            <span>
+              Money Mate AI is engineered with private on-device intelligence and iOS Liquid Glass architecture.
+            </span>
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#7c3aed',
+                background: 'rgba(124, 58, 237, 0.12)',
+                padding: '5px 12px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <ShieldCheck size={13} />
+              Developed by KANNALAB (KL)
+            </span>
+          </div>
         </div>
       </article>
     </section>
@@ -3518,6 +3713,103 @@ function App() {
 
   const View = views[section]
 
+  // 1. Session resolution loading state (Splash)
+  if (auth.loading) {
+    return (
+      <div className={`auth-page-root ${dark ? 'dark' : 'light'}`} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="auth-ambient" aria-hidden="true">
+          <div className="auth-orb auth-orb-1" />
+          <div className="auth-orb auth-orb-2" />
+        </div>
+        <div className="auth-loading-splash" style={{ textAlign: 'center', position: 'relative', zIndex: 2 }}>
+          <div className="auth-spinner" style={{ width: 44, height: 44, borderWidth: 3, margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '14px', fontWeight: 600, color: dark ? '#cbd5e1' : '#475569' }}>
+            Restoring your secure session...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Dedicated separate authentication experience for signed-out users
+  if (!auth.isAuthenticated && !isGuestMode) {
+    return (
+      <AuthLayout dark={dark} onToggleTheme={() => setDark((prev) => !prev)}>
+        {authScreen === 'welcome' && (
+          <WelcomeScreen
+            onGetStarted={() => setAuthScreen('register')}
+            onSignIn={() => setAuthScreen('login')}
+          />
+        )}
+        {authScreen === 'register' && (
+          <RegisterScreen
+            onBack={() => setAuthScreen('welcome')}
+            onNavigateToLogin={() => setAuthScreen('login')}
+            onRequireOtp={(email) => {
+              setPendingOtpEmail(email)
+              setOtpType('signup')
+              setAuthScreen('otp_verify')
+            }}
+            onSuccess={() => {
+              sessionStorage.setItem('moneymate_guest_session', 'true')
+              setIsGuestMode(true)
+              notify('Account created successfully!')
+            }}
+          />
+        )}
+        {authScreen === 'login' && (
+          <LoginScreen
+            onBack={() => setAuthScreen('welcome')}
+            onNavigateToRegister={() => setAuthScreen('register')}
+            onForgotPassword={() => setAuthScreen('forgot_password')}
+            onRequireOtp={(email) => {
+              setPendingOtpEmail(email)
+              setOtpType('email')
+              setAuthScreen('otp_verify')
+            }}
+            onSuccess={() => {
+              sessionStorage.setItem('moneymate_guest_session', 'true')
+              setIsGuestMode(true)
+              notify('Welcome back!')
+            }}
+          />
+        )}
+        {authScreen === 'otp_verify' && (
+          <OtpVerifyScreen
+            email={pendingOtpEmail}
+            otpType={otpType}
+            onBack={() => setAuthScreen(otpType === 'signup' ? 'register' : 'login')}
+            onSuccess={() => {
+              sessionStorage.setItem('moneymate_guest_session', 'true')
+              setIsGuestMode(true)
+              notify('Gmail verified successfully!')
+            }}
+          />
+        )}
+        {authScreen === 'forgot_password' && (
+          <ResetPasswordScreen onBackToLogin={() => setAuthScreen('login')} />
+        )}
+      </AuthLayout>
+    )
+  }
+
+  // 3. Dedicated post-auth instruction slides shown after registration or login complete
+  if ((auth.isAuthenticated || isGuestMode) && !hasCompletedIntro) {
+    return (
+      <AppIntroSlides
+        onComplete={() => {
+          sessionStorage.setItem('moneymate_intro_completed', 'true')
+          setHasCompletedIntro(true)
+          notify('Welcome to Money Mate!')
+        }}
+        onSkip={() => {
+          sessionStorage.setItem('moneymate_intro_completed', 'true')
+          setHasCompletedIntro(true)
+        }}
+      />
+    )
+  }
+
   return (
     <div className={`app ${dark ? 'dark' : 'light'} liquid-page-root`}>
       {/* Ambient Floating Glow Orbs */}
@@ -3544,9 +3836,14 @@ function App() {
           <i>
             <Sparkles size={18} />
           </i>
-          <b>
-            money<span>mate</span>
-          </b>
+          <div>
+            <b style={{ display: 'block', lineHeight: 1.1 }}>
+              money<span>mate</span>
+            </b>
+            <small style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: '#8b5cf6', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              KL · KANNALAB
+            </small>
+          </div>
           <button onClick={() => setSidebar(false)}>
             <X size={19} />
           </button>
@@ -3607,22 +3904,21 @@ function App() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Active Data Mode Indicator Pill */}
-            <button
-              className={`mode-badge ${isDemoMode ? 'demo' : 'real'}`}
-              onClick={() => toggleDemoMode()}
-              title="Click to toggle between Real Data and Demo Data"
+            <span
+              className="mode-badge real"
+              title="Authoritative Live IndexedDB Ledger"
             >
               <i
                 style={{
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  background: isDemoMode ? 'var(--orange)' : 'var(--mint)',
-                  boxShadow: `0 0 8px ${isDemoMode ? 'var(--orange)' : 'var(--mint)'}`,
+                  background: 'var(--mint)',
+                  boxShadow: '0 0 8px var(--mint)',
                 }}
               />
-              {isDemoMode ? 'Demo Mode' : 'Live Data'}
-            </button>
+              Live Data
+            </span>
 
             <button
               className="theme icon-button"
@@ -3675,21 +3971,6 @@ function App() {
                   <span>Back to Dashboard</span>
                 </button>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button
-                    className={`liquid-mode-pill ${isDemoMode ? 'demo' : 'real'}`}
-                    onClick={() => toggleDemoMode()}
-                    title="Toggle Live / Demo"
-                  >
-                    <i
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        background: isDemoMode ? '#a3401a' : '#0b6b4a',
-                      }}
-                    />
-                    {isDemoMode ? 'Demo' : 'Live'}
-                  </button>
                   <button
                     className="liquid-ai-round-btn"
                     onClick={() => setIsDrawerOpen(true)}
@@ -3871,6 +4152,119 @@ function App() {
                 <Upload size={20} />
                 <span>Import</span>
               </button>
+              <button
+                className="liquid-drawer-item"
+                onClick={() => {
+                  setAuthModalTab('onboarding')
+                  setIsAuthModalOpen(true)
+                  setIsDrawerOpen(false)
+                }}
+              >
+                <Sparkles size={20} />
+                <span>Feature Slides</span>
+              </button>
+            </div>
+
+            {/* Account Card in Drawer */}
+            <div
+              style={{
+                marginTop: '14px',
+                padding: '12px 14px',
+                borderRadius: '16px',
+                background: 'rgba(109, 63, 224, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #7d72ea, #aa7fe7)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    flexShrink: 0,
+                  }}
+                >
+                  {auth.isAuthenticated && auth.user?.email
+                    ? auth.user.email.charAt(0).toUpperCase()
+                    : 'G'}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#1f1a3d',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {auth.isAuthenticated && auth.user?.email
+                      ? auth.user.email
+                      : 'Guest Mode'}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#6d6796' }}>
+                    {auth.isAuthenticated ? 'Supabase RLS Active' : 'Offline IndexedDB'}
+                  </div>
+                </div>
+              </div>
+
+              {auth.isAuthenticated ? (
+                <button
+                  className="outline-button"
+                  style={{
+                    fontSize: '10px',
+                    color: '#ef4444',
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    padding: '4px 10px',
+                    minHeight: '28px',
+                  }}
+                  onClick={async () => {
+                    await auth.signOut()
+                    sessionStorage.removeItem('moneymate_guest_session')
+                    sessionStorage.removeItem('moneymate_intro_completed')
+                    setHasCompletedIntro(false)
+                    setIsGuestMode(false)
+                    setAuthScreen('welcome')
+                    notify('Logged out successfully')
+                    setIsDrawerOpen(false)
+                  }}
+                >
+                  Log Out
+                </button>
+              ) : (
+                <button
+                  className="primary-button"
+                  style={{
+                    fontSize: '10px',
+                    padding: '4px 12px',
+                    minHeight: '28px',
+                  }}
+                  onClick={() => {
+                    sessionStorage.removeItem('moneymate_guest_session')
+                    setIsGuestMode(false)
+                    setAuthScreen('login')
+                    setIsDrawerOpen(false)
+                  }}
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', fontSize: '10px', color: '#8d96ac', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+              <ShieldCheck size={12} color="#8b5cf6" />
+              <span>Developed by KANNALAB (KL)</span>
             </div>
           </div>
         </div>
@@ -4090,6 +4484,32 @@ function App() {
         }}
       />
 
+      {/* iOS Registration & Login Onboarding Modal */}
+      <AuthOnboardingModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
+        initialAuthMode="signin"
+        onSuccess={() => {
+          notify(auth.isAuthenticated ? 'Account updated' : 'Welcome to Money Mate!')
+        }}
+      />
+
+      {/* Transaction Quick Actions & Detail Pop-up */}
+      <TransactionDetailModal
+        transaction={selectedDetailTransaction}
+        onClose={() => setSelectedDetailTransaction(null)}
+        onEdit={(t) => {
+          setSelectedDetailTransaction(null)
+          handleOpenEditModal(t)
+        }}
+        onDelete={(t) => {
+          setSelectedDetailTransaction(null)
+          handleOpenDeleteModal(t)
+        }}
+        categoryMap={categoryMap}
+      />
+
       {/* Toast Notification */}
       {toast && (
         <div className="toast">
@@ -4124,61 +4544,6 @@ function PageTitle({
       </div>
       {action}
     </header>
-  )
-}
-
-function Commitment({
-  date,
-  month,
-  title,
-  detail,
-  mint,
-}: {
-  date: string
-  month: string
-  title: string
-  detail: string
-  mint?: boolean
-}) {
-  return (
-    <div className="commit">
-      <i className={mint ? 'mint' : ''}>
-        <b>{date}</b>
-        <small>{month}</small>
-      </i>
-      <p>
-        <b>{title}</b>
-        <span>{detail}</span>
-      </p>
-      <ChevronRight size={17} />
-    </div>
-  )
-}
-
-function Attention({
-  emoji,
-  shirt,
-  title,
-  detail,
-  tag,
-  button,
-}: {
-  emoji?: string
-  shirt?: boolean
-  title: string
-  detail: string
-  tag?: string
-  button?: () => void
-}) {
-  return (
-    <div className="commit attention">
-      <i>{shirt ? <Shirt size={19} /> : emoji}</i>
-      <p>
-        <b>{title}</b>
-        <span>{detail}</span>
-      </p>
-      {tag ? <em>{tag}</em> : <button onClick={button}>Add list</button>}
-    </div>
   )
 }
 

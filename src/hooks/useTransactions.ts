@@ -17,7 +17,7 @@ const repo = createTransactionRepository()
  */
 export function isMockTransaction(t: Transaction): boolean {
   if (t.id.startsWith('demo-') || t.id.startsWith('real-demo-')) return true
-  if (t.source === 'demo' || t.isDemo === true) return true
+  if (t.source === 'demo') return true
   // Test/dummy transactions created during UI automated testing
   if (
     /^(?:notebook return discount|checking to savings|consulting pay|office notebook)\b/i.test(
@@ -70,13 +70,20 @@ export function shouldReclassifyAsTransfer(t: Transaction): boolean {
 
 export function useTransactions() {
   const [realTransactions, setRealTransactions] = useState<Transaction[]>([])
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+  // Live mode is permanent — demo mode removed for real authoritative records
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false)
+
+  // Ensure any legacy demo mode flag in localStorage is cleared on startup
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('moneymate_is_demo_mode')
-      return saved !== null ? saved === 'true' : false
+      try {
+        localStorage.removeItem('moneymate_is_demo_mode')
+        localStorage.setItem('moneymate_is_demo_mode', 'false')
+      } catch {
+        // Ignore storage errors
+      }
     }
-    return false
-  })
+  }, [])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -304,15 +311,12 @@ export function useTransactions() {
     [isDemoMode]
   )
 
-  // Toggle demo mode
-  const toggleDemoMode = useCallback((targetMode?: boolean) => {
-    setIsDemoMode((prev) => {
-      const next = targetMode !== undefined ? targetMode : !prev
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('moneymate_is_demo_mode', String(next))
-      }
-      return next
-    })
+  // Toggle demo mode - kept as safe live-mode enforcer
+  const toggleDemoMode = useCallback((_targetMode?: boolean) => {
+    setIsDemoMode(false)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('moneymate_is_demo_mode', 'false')
+    }
   }, [])
 
   // Load starter data into real workspace if user explicitly requests

@@ -29,13 +29,7 @@ try {
 
 export function useShoppingList() {
   const [realItems, setRealItems] = useState<ShoppingListItem[]>([])
-  const [isDemoMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('moneymate_is_demo_mode')
-      return saved !== null ? saved === 'true' : false
-    }
-    return false
-  })
+  const [isDemoMode] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [storageWarning, setStorageWarning] = useState<string | null>(null)

@@ -1038,7 +1038,7 @@ export function ReconciliationModal({
     notify('Decision reset to initial auto-evaluation.')
   }
 
-  const handleDiscard = () => {
+  const handleDiscard = (silent = false) => {
     setSelectedFile(null)
     setFileContent('')
     setFileHash('')
@@ -1053,7 +1053,17 @@ export function ReconciliationModal({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-    notify('Draft reconciliation discarded from memory.')
+    if (!silent) {
+      notify('Draft reconciliation discarded from memory.')
+    }
+  }
+
+  const handleModalClose = () => {
+    if (committedBatch) {
+      handleDiscard(true)
+      onCommitSuccess?.()
+    }
+    onClose()
   }
 
   // Workspace safety guard: if active workspace changes while a reconciliation draft is staged,
@@ -1094,7 +1104,7 @@ export function ReconciliationModal({
         detected || (selectedProvider === 'auto' ? 'generic_csv' : selectedProvider)
 
       const res = await commitStatementBatch({
-        workspace: isDemoMode ? 'demo' : 'live',
+        workspace: 'live',
         records: parserResult.records,
         decisions: userDecisions,
         batchMetadata: {
@@ -1161,7 +1171,7 @@ export function ReconciliationModal({
     <div
       className="bd show recon-modal-backdrop"
       id="bd"
-      onClick={onClose}
+      onClick={handleModalClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="recon-title"
@@ -1176,7 +1186,7 @@ export function ReconciliationModal({
               {isDemoMode ? 'Demo Workspace' : 'Live Workspace'}
             </span>
           </div>
-          <button className="ib action-btn" onClick={onClose} aria-label="Close modal" title="Close modal">
+          <button className="ib action-btn" onClick={handleModalClose} aria-label="Close modal" title="Close modal">
             <X size={17} />
           </button>
         </div>
@@ -2836,8 +2846,10 @@ export function ReconciliationModal({
                   className="btn p primary-button"
                   id="recon-audit-done-btn"
                   onClick={() => {
-                    handleDiscard()
+                    handleDiscard(true)
+                    onCommitSuccess?.()
                     onClose()
+                    notify('Statement imported successfully! Recent activity updated.')
                   }}
                 >
                   Done

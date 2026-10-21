@@ -1052,6 +1052,29 @@ function App() {
             <div className="liquid-username">{effectiveUserName}</div>
           </div>
           <div className="liquid-header-actions">
+            {pinAuthService.hasPinAccount() ? (
+              <button
+                className="liquid-ai-round-btn"
+                onClick={() => {
+                  pinAuthService.lockSession()
+                  setIsPinLocked(true)
+                  notify('App locked.')
+                }}
+                aria-label="Lock App"
+                title="Lock Workspace with PIN"
+              >
+                <Lock size={18} />
+              </button>
+            ) : (
+              <button
+                className="liquid-ai-round-btn"
+                onClick={() => setShowPinSetup(true)}
+                aria-label="Set Security PIN"
+                title="Secure Workspace with Bank-Style PIN"
+              >
+                <Shield size={18} />
+              </button>
+            )}
             <button
               className="liquid-ai-round-btn"
               onClick={() => go('AI Assistant')}
@@ -3589,8 +3612,8 @@ function App() {
                 : 'Local Offline Mode (Guest). Transactions are stored securely in browser IndexedDB. Sign in or register to sync across devices.'}
             </span>
           </p>
-          {auth.isAuthenticated ? (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {auth.isAuthenticated && (
               <span
                 style={{
                   fontSize: '10px',
@@ -3603,6 +3626,47 @@ function App() {
               >
                 Synced
               </span>
+            )}
+            {pinAuthService.hasPinAccount() ? (
+              <button
+                className="outline-button"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#8b5cf6',
+                  borderColor: 'rgba(139, 92, 246, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                onClick={() => {
+                  pinAuthService.lockSession()
+                  setIsPinLocked(true)
+                  notify('App locked.')
+                }}
+              >
+                <Lock size={12} />
+                <span>Lock App</span>
+              </button>
+            ) : (
+              <button
+                className="primary-button"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                onClick={() => setShowPinSetup(true)}
+              >
+                <Shield size={12} />
+                <span>Set Security PIN</span>
+              </button>
+            )}
+
+            {auth.isAuthenticated && (
               <button
                 className="outline-button"
                 style={{
@@ -3631,49 +3695,8 @@ function App() {
               >
                 Log Out
               </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {pinAuthService.hasPinAccount() ? (
-                <button
-                  className="outline-button"
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: '#8b5cf6',
-                    borderColor: 'rgba(139, 92, 246, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                  }}
-                  onClick={() => {
-                    pinAuthService.lockSession()
-                    setIsPinLocked(true)
-                    notify('App locked.')
-                  }}
-                >
-                  <Lock size={12} />
-                  <span>Lock App</span>
-                </button>
-              ) : (
-                <button
-                  className="primary-button"
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                  }}
-                  onClick={() => setShowPinSetup(true)}
-                >
-                  <Shield size={12} />
-                  <span>Set Security PIN</span>
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div>
@@ -4009,6 +4032,53 @@ function App() {
               {dark ? '◐' : '◑'}
             </button>
 
+            {pinAuthService.hasPinAccount() ? (
+              <button
+                className="outline-button"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#8b5cf6',
+                  borderColor: 'rgba(139, 92, 246, 0.4)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  pinAuthService.lockSession()
+                  setIsPinLocked(true)
+                  notify('App locked.')
+                }}
+                title="Lock Workspace with PIN"
+              >
+                <Lock size={13} />
+                <span>Lock</span>
+              </button>
+            ) : (
+              <button
+                className="primary-button"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setShowPinSetup(true)}
+                title="Secure Workspace with Bank-Style 4-digit PIN"
+              >
+                <Shield size={13} />
+                <span>Set PIN</span>
+              </button>
+            )}
+
             <section className="alert">
               <button className="icon-button" onClick={() => setAlerts((x) => !x)}>
                 <Bell size={19} />
@@ -4300,82 +4370,82 @@ function App() {
                 </div>
               </div>
 
-              {auth.isAuthenticated ? (
-                <button
-                  className="outline-button"
-                  style={{
-                    fontSize: '10px',
-                    color: '#ef4444',
-                    borderColor: 'rgba(239, 68, 68, 0.3)',
-                    padding: '4px 10px',
-                    minHeight: '28px',
-                  }}
-                  onClick={async () => {
-                    await auth.signOut()
-                    sessionStorage.removeItem('moneymate_guest_session')
-                    sessionStorage.removeItem('moneymate_intro_completed')
-                    if (REQUIRE_AUTH_GATE) {
-                      setHasCompletedIntro(false)
-                      setIsGuestMode(false)
-                      setAuthScreen('welcome')
-                    } else {
-                      setHasCompletedIntro(true)
-                      setIsGuestMode(true)
-                    }
-                    notify('Logged out successfully')
-                    setIsDrawerOpen(false)
-                  }}
-                >
-                  Log Out
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {pinAuthService.hasPinAccount() ? (
-                    <button
-                      className="outline-button"
-                      style={{
-                        fontSize: '10px',
-                        color: '#8b5cf6',
-                        borderColor: 'rgba(139, 92, 246, 0.4)',
-                        padding: '4px 10px',
-                        minHeight: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                      onClick={() => {
-                        pinAuthService.lockSession()
-                        setIsPinLocked(true)
-                        setIsDrawerOpen(false)
-                        notify('App locked.')
-                      }}
-                    >
-                      <Lock size={12} />
-                      <span>Lock</span>
-                    </button>
-                  ) : (
-                    <button
-                      className="primary-button"
-                      style={{
-                        fontSize: '10px',
-                        padding: '4px 10px',
-                        minHeight: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                      }}
-                      onClick={() => {
-                        setShowPinSetup(true)
-                        setIsDrawerOpen(false)
-                      }}
-                    >
-                      <Shield size={12} />
-                      <span>Set PIN</span>
-                    </button>
-                  )}
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {pinAuthService.hasPinAccount() ? (
+                  <button
+                    className="outline-button"
+                    style={{
+                      fontSize: '10px',
+                      color: '#8b5cf6',
+                      borderColor: 'rgba(139, 92, 246, 0.4)',
+                      padding: '4px 10px',
+                      minHeight: '28px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    onClick={() => {
+                      pinAuthService.lockSession()
+                      setIsPinLocked(true)
+                      setIsDrawerOpen(false)
+                      notify('App locked.')
+                    }}
+                  >
+                    <Lock size={12} />
+                    <span>Lock</span>
+                  </button>
+                ) : (
+                  <button
+                    className="primary-button"
+                    style={{
+                      fontSize: '10px',
+                      padding: '4px 10px',
+                      minHeight: '28px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                    }}
+                    onClick={() => {
+                      setShowPinSetup(true)
+                      setIsDrawerOpen(false)
+                    }}
+                  >
+                    <Shield size={12} />
+                    <span>Set PIN</span>
+                  </button>
+                )}
+
+                {auth.isAuthenticated && (
+                  <button
+                    className="outline-button"
+                    style={{
+                      fontSize: '10px',
+                      color: '#ef4444',
+                      borderColor: 'rgba(239, 68, 68, 0.3)',
+                      padding: '4px 10px',
+                      minHeight: '28px',
+                    }}
+                    onClick={async () => {
+                      await auth.signOut()
+                      sessionStorage.removeItem('moneymate_guest_session')
+                      sessionStorage.removeItem('moneymate_intro_completed')
+                      if (REQUIRE_AUTH_GATE) {
+                        setHasCompletedIntro(false)
+                        setIsGuestMode(false)
+                        setAuthScreen('welcome')
+                      } else {
+                        setHasCompletedIntro(true)
+                        setIsGuestMode(true)
+                      }
+                      notify('Logged out successfully')
+                      setIsDrawerOpen(false)
+                    }}
+                  >
+                    Log Out
+                  </button>
+                )}
+              </div>
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', fontSize: '10px', color: '#8d96ac', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>

@@ -16,14 +16,13 @@
   --amb: #8a5a00;
   --ambb: #ffefc2;
 
-  --g: rgba(255, 255, 255, 0.52);
-  --g2: rgba(255, 255, 255, 0.72);
-  --gb: rgba(255, 255, 255, 0.85);
-  --gs: 0 12px 36px rgba(110, 80, 200, 0.16),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.35);
-  --in: rgba(255, 255, 255, 0.6);
-  --ln: rgba(80, 60, 150, 0.12);
+  --g: #ffffff;
+  --g2: #faf8ff;
+  --gb: rgba(109, 63, 224, 0.16);
+  --gs: 0 24px 64px rgba(18, 12, 45, 0.28),
+        inset 0 1px 0 #ffffff;
+  --in: #f7f4ff;
+  --ln: rgba(80, 60, 150, 0.1);
   --o1: #c4a8ff;
   --o2: #7fd6ff;
   --o3: #ffb3cf;
@@ -57,13 +56,12 @@
     --corb: rgba(255, 140, 100, 0.16);
     --amb: #fbbf24;
     --ambb: rgba(251, 191, 36, 0.15);
-    --g: rgba(44, 36, 92, 0.42);
-    --g2: rgba(60, 50, 120, 0.55);
-    --gb: rgba(255, 255, 255, 0.16);
-    --gs: 0 14px 40px rgba(0, 0, 0, 0.45),
-          inset 0 1px 0 rgba(255, 255, 255, 0.22),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-    --in: rgba(255, 255, 255, 0.07);
+    --g: #171333;
+    --g2: #221a44;
+    --gb: rgba(255, 255, 255, 0.14);
+    --gs: 0 24px 64px rgba(0, 0, 0, 0.65),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --in: #1c163b;
     --ln: rgba(255, 255, 255, 0.1);
     --o1: #6d3fe0;
     --o2: #1b78b8;
@@ -87,13 +85,12 @@
   --corb: rgba(255, 140, 100, 0.16);
   --amb: #fbbf24;
   --ambb: rgba(251, 191, 36, 0.15);
-  --g: rgba(44, 36, 92, 0.42);
-  --g2: rgba(60, 50, 120, 0.55);
-  --gb: rgba(255, 255, 255, 0.16);
-  --gs: 0 14px 40px rgba(0, 0, 0, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-  --in: rgba(255, 255, 255, 0.07);
+  --g: #171333;
+  --g2: #221a44;
+  --gb: rgba(255, 255, 255, 0.14);
+  --gs: 0 24px 64px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --in: #1c163b;
   --ln: rgba(255, 255, 255, 0.1);
   --o1: #6d3fe0;
   --o2: #1b78b8;
@@ -128,9 +125,9 @@
   display: grid;
   place-items: center;
   padding: 14px;
-  background: rgba(30, 20, 70, 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(14, 10, 32, 0.76);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   animation: fi 0.25s ease-out;
 }
 
@@ -166,11 +163,9 @@
   flex-direction: column;
   overflow: hidden;
   animation: up 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-  background: linear-gradient(150deg, var(--g2), var(--g));
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  background: var(--g);
   border: 1px solid var(--gb);
-  box-shadow: var(--gs);
+  box-shadow: 0 24px 70px rgba(18, 12, 45, 0.38), 0 4px 16px rgba(109, 63, 224, 0.12);
   color: var(--tx);
   font-family: -apple-system, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
   box-sizing: border-box;
@@ -186,7 +181,7 @@
   gap: 12px;
   padding: 18px 22px;
   border-bottom: 1px solid var(--ln);
-  background: transparent;
+  background: var(--g);
   flex-shrink: 0;
 }
 

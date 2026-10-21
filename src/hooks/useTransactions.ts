@@ -70,20 +70,16 @@ export function shouldReclassifyAsTransfer(t: Transaction): boolean {
 
 export function useTransactions() {
   const [realTransactions, setRealTransactions] = useState<Transaction[]>([])
-  // Live mode is permanent — demo mode removed for real authoritative records
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(false)
-
-  // Ensure any legacy demo mode flag in localStorage is cleared on startup
-  useEffect(() => {
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem('moneymate_is_demo_mode')
-        localStorage.setItem('moneymate_is_demo_mode', 'false')
+        return localStorage.getItem('moneymate_is_demo_mode') === 'true'
       } catch {
-        // Ignore storage errors
+        return false
       }
     }
-  }, [])
+    return false
+  })
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -311,12 +307,19 @@ export function useTransactions() {
     [isDemoMode]
   )
 
-  // Toggle demo mode - kept as safe live-mode enforcer
-  const toggleDemoMode = useCallback((_targetMode?: boolean) => {
-    setIsDemoMode(false)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('moneymate_is_demo_mode', 'false')
-    }
+  // Toggle between live mode and demo mode
+  const toggleDemoMode = useCallback((targetMode?: boolean) => {
+    setIsDemoMode((prev) => {
+      const next = typeof targetMode === 'boolean' ? targetMode : !prev
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('moneymate_is_demo_mode', String(next))
+        } catch {
+          // Ignore
+        }
+      }
+      return next
+    })
   }, [])
 
   // Load starter data into real workspace if user explicitly requests

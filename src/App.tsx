@@ -55,6 +55,9 @@ import {
 import {
   Area,
   AreaChart,
+  PieChart,
+  Pie,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -865,7 +868,7 @@ function App() {
 
   /* ------------------- Dashboard Section ------------------- */
   const Dashboard = () => {
-    const [analyticsTab, setAnalyticsTab] = useState<'cashflow' | 'categories'>('cashflow')
+    const [analyticsTab, setAnalyticsTab] = useState<'cashflow' | 'inflow' | 'categories'>('cashflow')
     const [waveHoverIndex, setWaveHoverIndex] = useState<number | null>(null)
 
     // Authentic last 7 days spending wave data
@@ -1052,6 +1055,33 @@ function App() {
             <div className="liquid-username">{effectiveUserName}</div>
           </div>
           <div className="liquid-header-actions">
+            <button
+              type="button"
+              className={`mode-badge ${isDemoMode ? 'demo' : 'real'}`}
+              onClick={() => {
+                toggleDemoMode()
+                notify(isDemoMode ? 'Switched to Live IndexedDB Ledger.' : 'Switched to Demo Workspace (218 records).')
+              }}
+              title={isDemoMode ? 'Currently in Demo Mode. Click to switch to Live Ledger.' : 'Currently using Live Ledger. Click to switch to Demo Workspace.'}
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '5px 12px',
+                marginRight: '2px',
+                borderRadius: '999px',
+              }}
+            >
+              <i
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: isDemoMode ? 'var(--orange)' : 'var(--mint)',
+                  boxShadow: isDemoMode ? '0 0 8px var(--orange)' : '0 0 8px var(--mint)',
+                }}
+              />
+              {isDemoMode ? 'Demo' : 'Live'}
+            </button>
             {pinAuthService.hasPinAccount() ? (
               <button
                 className="liquid-ai-round-btn"
@@ -1135,6 +1165,20 @@ function App() {
                   <div>
                     <div className="liquid-hero-pill-label">Expenses</div>
                     <div className="liquid-hero-pill-val">{formatPaise(summary.totalConfirmedExpenses)}</div>
+                  </div>
+                </div>
+                <div className="liquid-hero-pill">
+                  <span className="liquid-hero-pill-icon flow">
+                    <CircleDollarSign size={15} strokeWidth={2.5} />
+                  </span>
+                  <div>
+                    <div className="liquid-hero-pill-label">Net Flow</div>
+                    <div
+                      className="liquid-hero-pill-val"
+                      style={{ color: summary.netCashFlow >= 0 ? '#0b6b4a' : '#ef4444' }}
+                    >
+                      {formatPaise(summary.netCashFlow)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1253,9 +1297,27 @@ function App() {
                       background: analyticsTab === 'cashflow' ? '#ffffff' : 'transparent',
                       color: analyticsTab === 'cashflow' ? '#6d3fe0' : '#5b5780',
                       boxShadow: analyticsTab === 'cashflow' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                      cursor: 'pointer',
                     }}
                   >
                     Wave
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsTab('inflow')}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: 8,
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      border: 'none',
+                      background: analyticsTab === 'inflow' ? '#ffffff' : 'transparent',
+                      color: analyticsTab === 'inflow' ? '#6d3fe0' : '#5b5780',
+                      boxShadow: analyticsTab === 'inflow' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Inflow/Outflow
                   </button>
                   <button
                     type="button"
@@ -1269,9 +1331,10 @@ function App() {
                       background: analyticsTab === 'categories' ? '#ffffff' : 'transparent',
                       color: analyticsTab === 'categories' ? '#6d3fe0' : '#5b5780',
                       boxShadow: analyticsTab === 'categories' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                      cursor: 'pointer',
                     }}
                   >
-                    Inflow/Outflow
+                    Categories
                   </button>
                 </div>
               </div>
@@ -1407,7 +1470,7 @@ function App() {
                     ))}
                   </div>
                 </>
-              ) : (
+              ) : analyticsTab === 'inflow' ? (
                 <div style={{ width: '100%', height: 130 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
@@ -1453,6 +1516,85 @@ function App() {
                       <Area type="monotone" dataKey="expense" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#waveExpenseGradLg)" />
                     </AreaChart>
                   </ResponsiveContainer>
+                </div>
+              ) : (
+                <div style={{ width: '100%', height: 130, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {summary.categoryTotals.length > 0 ? (
+                    <>
+                      <div style={{ position: 'relative', width: '45%', height: '100%' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={summary.categoryTotals}
+                              dataKey="paise"
+                              innerRadius={36}
+                              outerRadius={54}
+                              paddingAngle={3}
+                              stroke="none"
+                              startAngle={90}
+                              endAngle={-270}
+                            >
+                              {summary.categoryTotals.map((item) => (
+                                <Cell key={item.category} fill={item.color} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <b style={{ fontSize: '11px', color: '#1f1a3d', fontWeight: 800 }}>
+                            {formatPaise(summary.totalConfirmedExpenses)}
+                          </b>
+                          <small style={{ fontSize: '8px', color: '#6d6796', textTransform: 'uppercase' }}>
+                            Spent
+                          </small>
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '120px' }}>
+                        {summary.categoryTotals.slice(0, 4).map((item) => (
+                          <div
+                            key={item.category}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              fontSize: '10px',
+                              color: '#5b5780',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                              <span
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  background: item.color,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85px' }}>
+                                {item.category}
+                              </span>
+                            </div>
+                            <b style={{ color: '#1f1a3d', fontWeight: 700 }}>{item.percentage}%</b>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ width: '100%', textAlign: 'center', color: '#6d6796', fontSize: '11px', padding: '20px 0' }}>
+                      No categorized expenses recorded yet
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1536,6 +1678,106 @@ function App() {
                   <div className="liquid-due-amt">{u.amt}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Inventory Signals & Pantry Radar (Vercel Needs Attention) */}
+            <div className="liquid-card" style={{ marginTop: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Package size={17} color="#8b5cf6" />
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#1f1a3d' }}>
+                    Inventory Signals
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => go('My Inventory')}
+                  style={{ fontSize: '11px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Inventory <ChevronRight size={13} />
+                </button>
+              </div>
+
+              {inventoryHook.items.filter((item) => {
+                const s = calculateStockStatus(item)
+                return s.status === 'running_low' || s.status === 'out_of_stock' || s.isExpiringSoon
+              }).length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {inventoryHook.items
+                    .filter((item) => {
+                      const s = calculateStockStatus(item)
+                      return s.status === 'running_low' || s.status === 'out_of_stock' || s.isExpiringSoon
+                    })
+                    .slice(0, 3)
+                    .map((item) => {
+                      const s = calculateStockStatus(item)
+                      const isOutOfStock = s.status === 'out_of_stock'
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 10px',
+                            borderRadius: '12px',
+                            background: isOutOfStock ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                            border: `1px solid ${isOutOfStock ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#1f1a3d', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {item.name}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#6d6796' }}>
+                              {isOutOfStock ? 'Out of stock' : `${item.quantity} ${item.unit} left (min: ${item.minThreshold ?? 1})`}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            style={{
+                              fontSize: '9px',
+                              padding: '4px 8px',
+                              minHeight: '26px',
+                              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                              borderRadius: '8px',
+                              flexShrink: 0,
+                              cursor: 'pointer',
+                            }}
+                            onClick={async () => {
+                              try {
+                                await shoppingHook.addItem({
+                                  productName: item.name,
+                                  category: item.category,
+                                  quantity: Math.max(1, (item.minThreshold ?? 1) * 2 - item.quantity),
+                                  unit: item.unit,
+                                  estimatedPricePaise: 0,
+                                  priority: isOutOfStock ? 'high' : 'medium',
+                                  inventoryItemId: item.id,
+                                  status: 'to_buy',
+                                  reason: 'Added from inventory low-stock alert',
+                                })
+                                notify(`Added ${item.name} to Smart Shopping list!`)
+                              } catch {
+                                notify(`Item ${item.name} already in shopping list.`)
+                              }
+                            }}
+                          >
+                            + Shopping List
+                          </button>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)' }}>
+                  <ShieldCheck size={16} color="#059669" />
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#065f46' }}>
+                    All pantry &amp; household essentials are well stocked.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -4007,22 +4249,27 @@ function App() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Active Data Mode Indicator Pill */}
-            <span
-              className="mode-badge real"
-              title="Authoritative Live IndexedDB Ledger"
+            {/* Interactive Data Mode Toggle Pill (Demo vs Live) */}
+            <button
+              type="button"
+              className={`mode-badge ${isDemoMode ? 'demo' : 'real'}`}
+              onClick={() => {
+                toggleDemoMode()
+                notify(isDemoMode ? 'Switched to Live IndexedDB Ledger.' : 'Switched to Demo Workspace (218 records).')
+              }}
+              title={isDemoMode ? 'Currently in Demo Mode. Click to switch to Live Ledger.' : 'Currently using Live Ledger. Click to switch to Demo Workspace.'}
             >
               <i
                 style={{
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  background: 'var(--mint)',
-                  boxShadow: '0 0 8px var(--mint)',
+                  background: isDemoMode ? 'var(--orange)' : 'var(--mint)',
+                  boxShadow: isDemoMode ? '0 0 8px var(--orange)' : '0 0 8px var(--mint)',
                 }}
               />
-              Live Data
-            </span>
+              {isDemoMode ? 'Demo Workspace' : 'Live Data'}
+            </button>
 
             <button
               className="theme icon-button"

@@ -487,6 +487,11 @@
   color: #a3401a;
 }
 
+.liquid-hero-pill-icon.flow {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
 .liquid-hero-pill-label {
   font-size: 11px;
   color: #5b5780;
